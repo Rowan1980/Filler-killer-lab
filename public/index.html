@@ -104,7 +104,7 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
         <select id="sens"><option value="sensitive">Sensitive (catches more, more false alerts)</option><option value="balanced" selected>Balanced</option><option value="strict">Strict (fewer false alerts)</option></select>
       </label>
     </div>
-    <p class="note" id="localNote" hidden>Experimental on-device model (47k parameters) that listens for the sound of um/uh/er. No audio leaves your phone. On a 3.1-hour podcast test it caught about 80% / 65% / 50% of ums at roughly 106 / 48 / 16 false alerts per hour (sensitive / balanced / strict).</p>
+    <p class="note" id="localNote" hidden>On-device model (168k parameters, 23 Oct 2026) that listens for the sound of um/uh/er. No audio leaves your phone. On a 3.1-hour real podcast test (928 ums) it caught about 78% / 69% / 43% of ums at roughly 65 / 29 / 6 false alerts per hour (sensitive / balanced / strict).</p>
     <p class="note" id="dgNote" hidden>Your key stays in this browser and goes only to Deepgram. Use a key you can revoke.</p>
     <div>
       <div class="status" style="margin-bottom:6px">Fillers to count</div>
