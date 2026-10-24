@@ -66,18 +66,54 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
 .err{color:var(--accent);font-weight:600;margin:0}
 #flash{position:fixed;inset:0;background:var(--accent);opacity:0;pointer-events:none;transition:opacity .25s}
 #flash.on{opacity:.35;transition:none}
-@media (prefers-reduced-motion:reduce){#flash{transition:none}}
+/* big start/stop button at the top */
+.start{font:800 clamp(22px,6.5vw,30px)/1 var(--display);letter-spacing:.08em;text-transform:uppercase;width:100%;min-height:84px;border-radius:18px;
+  box-shadow:0 8px 22px color-mix(in srgb,var(--accent) 35%,transparent);transition:transform .08s,box-shadow .2s,background .2s;touch-action:manipulation}
+.start:active{transform:scale(.985)}
+.start.live{background:var(--fg);color:var(--bg);animation:pulse 1.6s ease-in-out infinite}
+@keyframes pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 60%,transparent)}50%{box-shadow:0 0 0 12px transparent}}
+/* collapsible setup sections */
+.fold{border:1px solid var(--line);border-radius:12px;background:var(--bg)}
+.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 14px;min-height:50px;border-radius:12px}
+.fold>summary::-webkit-details-marker{display:none}
+.fold>summary::after{content:'';flex:none;margin-left:auto;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-3px) rotate(45deg);transition:transform .2s}
+.fold[open]>summary::after{transform:translateY(2px) rotate(-135deg)}
+.fold>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.fold>summary .status{flex:none}
+.sumval{font:600 14px var(--body);color:var(--fg);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.foldbody{padding:2px 14px 14px;display:flex;flex-direction:column;gap:12px}
+/* filler pills: one size, filled when on */
+.pills{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px}
+.pill{position:relative;display:block;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
+.pill input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.pill span{display:flex;align-items:center;justify-content:center;gap:8px;height:52px;padding:0 12px;border-radius:999px;border:1.5px solid var(--line);
+  background:var(--panel);font:600 14px/1.15 var(--body);color:var(--fg);text-align:center;
+  transition:background .15s,border-color .15s,color .15s,box-shadow .15s,transform .08s}
+.pill span::before{content:'';flex:none;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--muted);font-size:12px;font-weight:800;line-height:1}
+.pill input:checked+span{background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 70%,#ff9f43));border-color:transparent;color:var(--accent-ink);
+  box-shadow:0 4px 14px color-mix(in srgb,var(--accent) 32%,transparent)}
+.pill input:checked+span::before{content:'✓';border-color:var(--accent-ink);background:var(--accent-ink);color:var(--accent)}
+.pill input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.pill:active span{transform:scale(.97)}
+@media (hover:hover){.pill:hover input:not(:checked)+span{border-color:var(--accent)}}
+@media (prefers-reduced-motion:reduce){#flash{transition:none}.start.live{animation:none}}
 </style>
 </head>
 <body>
 <div id="flash"></div>
 <div class="wrap">
+  <button class="btn start" id="startBtn">Start listening</button>
+  <p class="err" id="err" hidden></p>
+
   <header>
     <h1>Filler <span>Killer</span> Lab</h1>
     <p class="sub">Prototype bench test: live filler alerts, detection latency and accuracy against a known script.</p>
   </header>
 
   <section class="panel" aria-label="Setup">
+    <details class="fold" id="engineFold">
+    <summary><span class="status">Speech engine</span><span class="sumval" id="engineSum"></span></summary>
+    <div class="foldbody">
     <div class="row">
       <label style="flex:1 1 220px">Speech engine
         <select id="engine">
@@ -106,10 +142,12 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
     </div>
     <p class="note" id="localNote" hidden>On-device model v8 (170k parameters, 24 Oct 2026, trained with background noise, room echo and phone-mic effects, and listening to pitch steadiness as well as the sound) that listens for um/uh/er. No audio leaves your phone. On a 3.1-hour real podcast test (928 ums) it caught about 81% / 71% / 48% of ums at roughly 63 / 26 / 9 false alerts per hour (sensitive / balanced / strict). With noise added (café chatter, street, music, a room, a pocket) it still caught 57–66% at 25 false alerts per hour or fewer.</p>
     <p class="note" id="dgNote" hidden>Your key stays in this browser and goes only to Deepgram. Use a key you can revoke.</p>
-    <div>
-      <div class="status" style="margin-bottom:6px">Fillers to count</div>
-      <div class="chips" id="fillerChips"></div>
     </div>
+    </details>
+    <details class="fold" id="fillerFold">
+      <summary><span class="status">Fillers to count</span><span class="sumval" id="fillerSum"></span></summary>
+      <div class="foldbody"><div class="pills" id="fillerChips"></div></div>
+    </details>
     <div>
       <div class="status" style="margin-bottom:6px">Prompt on each filler</div>
       <div class="chips">
@@ -128,8 +166,6 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
 
   <section class="panel">
     <p class="note" id="modeNote"></p>
-    <button class="btn" id="startBtn">Start listening</button>
-    <p class="err" id="err" hidden></p>
     <div class="counter">
       <div class="big" id="total">0</div>
       <div><div class="status" id="status">Idle</div><div class="note" id="elapsed">0:00 · 0.0 fillers/min</div></div>
@@ -235,12 +271,14 @@ let beepCtx=null, wakeLock=null, timer=null;
 const $=s=>document.querySelector(s);
 
 // chips
-$('#fillerChips').innerHTML = FILLERS.map(f=>`<label class="chip"><input type="checkbox" value="${f.id}" ${f.on?'checked':''}> ${f.label}</label>`).join('');
+$('#fillerChips').innerHTML = FILLERS.map(f=>`<label class="pill"><input type="checkbox" value="${f.id}" ${f.on?'checked':''}><span>${f.label}</span></label>`).join('');
+function syncFillerSum(){const n=enabled().size;$('#fillerSum').textContent=`${n} of ${FILLERS.length} on`;}
+$('#fillerChips').addEventListener('change',syncFillerSum); syncFillerSum();
 $('#script').textContent = SCRIPT;
 
 // engine UI
 try{const k=localStorage.getItem('fk_dg');if(k)$('#dgKey').value=k;}catch(e){}
-function syncEngine(){engine=$('#engine').value;const dg=engine==='deepgram';$('#dgRow').hidden=!dg;$('#dgNote').hidden=!dg;$('#langWrap').hidden=dg||engine==='local';$('#localNote').hidden=!(engine==='local'||engine==='hybrid');$('#sensRow').hidden=$('#localNote').hidden;}
+function syncEngine(){engine=$('#engine').value;$('#engineSum').textContent=$('#engine').selectedOptions[0].textContent;const dg=engine==='deepgram';$('#dgRow').hidden=!dg;$('#dgNote').hidden=!dg;$('#langWrap').hidden=dg||engine==='local';$('#localNote').hidden=!(engine==='local'||engine==='hybrid');$('#sensRow').hidden=$('#localNote').hidden;}
 $('#engine').addEventListener('change',syncEngine); syncEngine();
 
 // tabs
@@ -513,7 +551,7 @@ async function start(){
   try{ beepCtx=beepCtx||new (window.AudioContext||window.webkitAudioContext)(); await beepCtx.resume(); }catch(e){}
   try{ wakeLock=await navigator.wakeLock?.request('screen'); }catch(e){}
   t0=performance.now(); running=true;
-  $('#startBtn').textContent='Stop'; $('#status').textContent='Listening · '+ENGINE_NAME[engine]; $('#status').classList.add('live');
+  $('#startBtn').textContent='Stop'; $('#startBtn').classList.add('live'); $('#status').textContent='Listening · '+ENGINE_NAME[engine]; $('#status').classList.add('live');
   timer=setInterval(tick,500); render();
   try{ if(engine==='deepgram') await startDeepgram(); else if(engine==='local') await startLocal(); else if(engine==='hybrid'){ await startLocal(); startBrowser(); } else startBrowser(); }
   catch(e){ showErr(e.message||String(e)); stop(); }
@@ -527,7 +565,7 @@ function stop(){
   try{ctx&&ctx.close();}catch(e){} ctx=null;
   try{stream&&stream.getTracks().forEach(t=>t.stop());}catch(e){} stream=null;
   try{wakeLock&&wakeLock.release();}catch(e){} wakeLock=null;
-  $('#startBtn').textContent='Start listening'; $('#status').textContent='Stopped'; $('#status').classList.remove('live');
+  $('#startBtn').textContent='Start listening'; $('#startBtn').classList.remove('live'); $('#status').textContent='Stopped'; $('#status').classList.remove('live');
   render();
 }
 $('#startBtn').addEventListener('click',()=>running?stop():start());
