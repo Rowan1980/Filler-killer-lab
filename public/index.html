@@ -35,7 +35,7 @@ label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:4
 .row>*{min-width:0}
 select,input[type=password],input[type=text]{font:15px var(--body);padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);min-width:0}
 .chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{display:inline-flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:14px;cursor:pointer;color:var(--fg);user-select:none}
+.chip{display:inline-flex;flex-direction:row;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:14px;cursor:pointer;color:var(--fg);user-select:none}
 .chip input{accent-color:var(--accent);margin:0}
 .tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--line);padding:4px;border-radius:10px}
 .tabs button{font:600 14px var(--body);border:0;border-radius:7px;padding:10px 4px;background:transparent;color:var(--fg);cursor:pointer}
@@ -111,6 +111,16 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
 .ibtn.yes[aria-pressed=true]{background:var(--ok);border-color:var(--ok);color:#fff}
 .ibtn.no[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .calcard{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:10px}
+/* um library */
+.libh{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:10px 0 0}
+.clip{border:1px solid var(--line);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px;transition:opacity .15s}
+.clip.off{opacity:.55}
+.cliprow{display:flex;align-items:center;gap:8px}
+.cliprow .what{font-size:13px;color:var(--muted);flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cliprow.btns{justify-content:flex-end}
+.pill.sm{flex:none}
+.pill.sm span{height:36px;min-width:104px;padding:0 12px;font-size:13px}
+.wave{width:100%;height:64px;display:block;border-radius:8px;background:var(--bg);touch-action:none;cursor:ew-resize}
 @media (prefers-reduced-motion:reduce){#flash{transition:none}.start.live{animation:none}}
 </style>
 </head>
@@ -133,6 +143,7 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
       <button class="btn secondary" id="whoAdd" aria-label="Add a person" style="flex:none">+ Add</button>
       <button class="btn secondary" id="whoDel" aria-label="Remove this person" style="flex:none">Remove</button>
     </div>
+    <button class="btn secondary" id="libBtn">Um library</button>
     <details class="fold" id="engineFold">
     <summary><span class="status">Speech engine</span><span class="sumval" id="engineSum"></span></summary>
     <div class="foldbody">
@@ -223,6 +234,16 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
       <div class="scroll"><table id="calTable" hidden><thead><tr><th>Setting</th><th>Standard</th><th>Yours</th></tr></thead><tbody></tbody></table></div>
       <label class="chip" style="align-self:flex-start"><input type="checkbox" id="useCal" disabled> Use my calibration</label>
     </div>
+  </section>
+
+  <section class="panel" id="libPanel" hidden>
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h2>Um library · <span id="libWho"></span></h2>
+      <button class="btn secondary" id="libClose">Close</button>
+    </div>
+    <p class="note">Every um found in this person's recordings. Play each one, drag the edges of the highlighted part to trim it to just the um, and switch off anything that isn't an um.</p>
+    <p class="note" id="libSum"></p>
+    <div class="alist" id="libList" style="max-height:none"></div>
   </section>
 
   <section class="panel" id="latencyPanel" hidden>
@@ -628,7 +649,7 @@ async function finishSession(){
 async function refreshSessions(selectId){
   const all=await tx('meta','readonly',s=>s.getAll()).catch(()=>[])||[], first=profs().list[0];
   for(const m of all) if(!m.profile){ m.profile=first; dbPutMeta(m).catch(()=>{}); }   // recordings made before profiles existed
-  metas=all.filter(m=>m.profile===who()).sort((a,b)=>b.id-a.id); $('#whoName').textContent=who();
+  metas=all.filter(m=>m.profile===who()).sort((a,b)=>b.id-a.id); $('#whoName').textContent=who(); updateLibBtn(); libSoon();
   $('#reviewPanel').hidden=!metas.length; if(!metas.length){ cur=null; return; }
   $('#sessSel').innerHTML=metas.map(m=>`<option value="${m.id}">${new Date(m.date).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} · ${fmtT(m.dur)} · ${m.alerts.length} alerts${m.done?' · ✓ marked':''}</option>`).join('');
   const id=selectId ?? (cur&&metas.some(m=>m.id===cur.id)?cur.id:metas[0].id);
@@ -652,7 +673,7 @@ function renderReview(){
   }).join('') : '<p class="note">No alerts in this recording. Add any ums it missed while you listen.</p>';
   const real=cur.alerts.filter(a=>a.label==='real').length, not=cur.alerts.filter(a=>a.label==='not').length;
   $('#revStats').textContent=`${cur.alerts.length} alerts: ${real} real, ${not} not, ${cur.alerts.length-real-not} unmarked · ${cur.missed.length} missed added`;
-  drawTl();
+  drawTl(); updateLibBtn(); libSoon();
 }
 const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
 function drawTl(){
@@ -691,7 +712,8 @@ addEventListener('resize',drawTl);
 $('#expBtn').addEventListener('click',async()=>{ if(!cur) return; const stamp=cur.date.slice(0,16).replace(/[:T]/g,'-');
   const dl=(blob,name)=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500); };
   const j={app:'Filler Killer Lab', date:cur.date, model:cur.model, preset:cur.preset, threshold:cur.cfg, personalCalibration:cur.personal, durationS:cur.dur,
-    reviewedCompletely:cur.done, alerts:cur.alerts.map(a=>({t:a.t,label:a.label||'unmarked'})), missedUms:cur.missed, probs100fps:Array.from(cur.probs,v=>Math.round(v*1000)/1000)};
+    reviewedCompletely:cur.done, ums:libItems(cur).map(it=>({t:it.t, source:it.kind==='a'?'alert':'missed', label:it.kind==='a'?(cur.alerts[it.i].label||'unmarked'):(it.on?'real':'excluded'),
+      start:it.span[0], end:it.span[1], trimmed:!!(cur.spans&&cur.spans[it.key])})), probs100fps:Array.from(cur.probs,v=>Math.round(v*1000)/1000)};
   dl(new Blob([JSON.stringify(j)],{type:'application/json'}),`filler-killer-${stamp}.json`);
   const au=await dbGetAudio(cur.id).catch(()=>null); if(au) setTimeout(()=>dl(wavBlob(au),`filler-killer-${stamp}.wav`),400); });
 $('#delBtn').addEventListener('click',async()=>{ if(!cur||!confirm('Delete this recording and its marks from this device?')) return; const id=cur.id;
@@ -720,6 +742,84 @@ $('#whoDel').addEventListener('click',async()=>{ const p=profs(), n=p.current;
   p.list=p.list.filter(x=>x!==n); p.current=p.list[0]; saveProfs(p); switchWho(); });
 renderWho();
 
+// um library: every um in this person's recordings (alerts not marked "not", plus missed ums), with play / trim / include.
+// Uses the same session objects as Review (metas), so both stay in step. Trim = meta.spans[key]; excluded missed = meta.off[key].
+const libAudio=new Map(), LIB_PAD=1.0; let actx=null, libSrc=null, libDrag=null, libMap=new Map(), libTimer=null;
+const libOpen=()=>!$('#libPanel').hidden, missKey=t=>'m'+Math.round(t*100), missOn=(m,t)=>!(m.off&&m.off[missKey(t)]);
+async function libGetAudio(id){
+  if(!libAudio.has(id)){ if(libAudio.size>=6) libAudio.delete(libAudio.keys().next().value); libAudio.set(id, await dbGetAudio(id).catch(()=>null)); }
+  return libAudio.get(id);
+}
+function estSpan(m,t){ // first guess at the um's extent from the model's probabilities around the alert / mark
+  const P=m.probs, i0=Math.max(0,Math.floor((t-0.9)*100)), i1=Math.min(P.length,Math.ceil((t+0.3)*100)); let bi=i0;
+  for(let i=i0;i<i1;i++) if(P[i]>P[bi]) bi=i;
+  if(!(P[bi]>=0.3)) return [Math.max(0,+(t-0.4).toFixed(2)), +t.toFixed(2)];
+  let a=bi,b=bi; while(a>0&&P[a-1]>=0.3) a--; while(b<P.length-1&&P[b+1]>=0.3) b++;
+  const s=Math.max(0,a/100-0.05), e=Math.max(s+0.15,b/100-0.05); return [+s.toFixed(2),+e.toFixed(2)];   // offsets fitted on labelled test ums
+}
+function libItems(m){ m.spans=m.spans||{}; m.off=m.off||{};
+  return [...m.alerts.map((a,i)=>({m,kind:'a',i,t:a.t,key:'a'+i,on:a.label!=='not',tag:a.label==='real'?'confirmed':a.label==='not'?'not an um':'found, not reviewed'})),
+          ...m.missed.map(t=>({m,kind:'m',t,key:missKey(t),on:missOn(m,t),tag:'missed by detector, added'}))]
+    .sort((x,y)=>x.t-y.t).map(it=>(it.span=(m.spans[it.key]||estSpan(m,it.t)).slice(),it));
+}
+const sessDate=m=>new Date(m.date).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
+function updateLibBtn(){ const n=metas.reduce((a,m)=>a+m.alerts.filter(x=>x.label!=='not').length+m.missed.filter(t=>missOn(m,t)).length,0);
+  $('#libBtn').textContent=`Um library · ${who()} · ${n} um${n===1?'':'s'}`; }
+function renderLib(){
+  $('#libWho').textContent=who(); libMap=new Map();
+  const groups=metas.map(m=>({m,items:libItems(m)})).filter(g=>g.items.length);
+  const n=groups.reduce((a,g)=>a+g.items.length,0), on=groups.reduce((a,g)=>a+g.items.filter(i=>i.on).length,0);
+  $('#libSum').textContent=n?`${n} ums in ${groups.length} recording${groups.length>1?'s':''} · ${on} included`:'No ums yet. Record a session with the on-device or hybrid engine.';
+  $('#libList').innerHTML=groups.map(g=>`<h3 class="libh">${sessDate(g.m)} · ${fmtT(g.m.dur)}</h3>`+g.items.map(it=>{ const id=g.m.id+'|'+it.key; libMap.set(id,it);
+    return `<div class="clip${it.on?'':' off'}" data-id="${id}">
+      <div class="cliprow"><label class="pill sm"><input type="checkbox" data-act="on" ${it.on?'checked':''} aria-label="Include the um at ${fmtT2(it.t)}"><span>${it.on?'Um':'Excluded'}</span></label>
+        <span class="t" style="font:600 14px var(--mono)">${fmtT2(it.t)}</span><span class="what">${it.tag} · <b data-len>${(it.span[1]-it.span[0]).toFixed(2)} s</b></span></div>
+      <canvas class="wave" aria-label="Waveform: drag the edges of the highlighted part to trim the um"></canvas>
+      <div class="cliprow btns"><button class="ibtn" data-act="play">▶ Um</button><button class="ibtn" data-act="ctx">▶ Context</button></div></div>`; }).join('')).join('');
+  for(const el of $('#libList').querySelectorAll('.clip')) drawClip(el);
+}
+const libSoon=()=>{ if(!libOpen()) return; clearTimeout(libTimer); libTimer=setTimeout(renderLib,60); };
+async function drawClip(el,keepWin){ // keepWin: hold the view still while an edge is dragged
+  const it=libMap.get(el.dataset.id), c=el.querySelector('canvas'), au=await libGetAudio(it.m.id);
+  const adur=au?au.length/16000:0; if(!keepWin||!it.win) it.win=[Math.max(0,it.span[0]-LIB_PAD), Math.min(adur||it.m.dur, it.span[1]+LIB_PAD)];
+  const dpr=devicePixelRatio||1, W=c.clientWidth, H=c.clientHeight; if(!W) return;
+  if(c.width!==Math.round(W*dpr)){ c.width=Math.round(W*dpr); c.height=Math.round(H*dpr); }
+  const g=c.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
+  const [w0,w1]=it.win, x=t=>(t-w0)/(w1-w0)*W;
+  g.fillStyle=cssv('--accent'); g.globalAlpha=0.16; g.fillRect(x(it.span[0]),0,x(it.span[1])-x(it.span[0]),H); g.globalAlpha=1;
+  if(au){ g.fillStyle=cssv('--muted'); const s0=Math.floor(w0*16000), n=Math.max(1,Math.floor((w1-w0)*16000/W)); let pk=1;
+    for(let i=s0;i<Math.min(au.length,w1*16000);i++) pk=Math.max(pk,Math.abs(au[i]));
+    for(let px=0;px<W;px++){ let mx=0; for(let i=s0+px*n;i<s0+(px+1)*n&&i<au.length;i++) mx=Math.max(mx,Math.abs(au[i])); const h=Math.max(1,mx/pk*(H/2-4)); g.fillRect(px,H/2-h,1,2*h); } }
+  else { g.fillStyle=cssv('--muted'); g.font='12px system-ui'; g.textAlign='center'; g.fillText('No audio kept for this part',W/2,H/2+4); }
+  g.fillStyle=cssv('--accent'); for(const t of it.span){ const X=x(t); g.fillRect(X-1.5,0,3,H); g.fillRect(X-5,H/2-9,10,18); }
+}
+async function playSpan(it,a,b){
+  const au=await libGetAudio(it.m.id); if(!au) return;
+  try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); await actx.resume(); }catch(e){ return; }
+  const s0=Math.max(0,Math.floor(a*16000)), s1=Math.min(au.length,Math.ceil(b*16000)); if(s1<=s0) return;
+  const buf=actx.createBuffer(1,s1-s0,16000), ch=buf.getChannelData(0); for(let i=0;i<ch.length;i++) ch[i]=au[s0+i]/32768;
+  try{ libSrc&&libSrc.stop(); }catch(e){} libSrc=actx.createBufferSource(); libSrc.buffer=buf; libSrc.connect(actx.destination); libSrc.start();
+}
+function libSave(it){ it.m.spans[it.key]=it.span.slice(); dbPutMeta(it.m).catch(()=>showErr('Could not save the change.')); }
+$('#libList').addEventListener('click',e=>{ const b=e.target.closest('button[data-act]'); if(!b) return; const it=libMap.get(b.closest('.clip').dataset.id);
+  if(b.dataset.act==='play') playSpan(it,it.span[0],it.span[1]); else playSpan(it,it.win[0],it.win[1]); });
+$('#libList').addEventListener('change',e=>{ if(e.target.dataset.act!=='on') return; const el=e.target.closest('.clip'), it=libMap.get(el.dataset.id), on=e.target.checked;
+  if(it.kind==='a') it.m.alerts[it.i].label=on?'real':'not'; else if(on) delete it.m.off[it.key]; else it.m.off[it.key]=true;
+  it.on=on; el.classList.toggle('off',!on); e.target.nextElementSibling.textContent=on?'Um':'Excluded';
+  dbPutMeta(it.m).catch(()=>showErr('Could not save the change.')); updateLibBtn(); if(cur===it.m) renderReview(); libSoon(); });
+$('#libList').addEventListener('pointerdown',e=>{ const c=e.target.closest('canvas.wave'); if(!c) return; const it=libMap.get(c.closest('.clip').dataset.id); if(!it.win) return;
+  const r=c.getBoundingClientRect(), t=it.win[0]+(e.clientX-r.left)/r.width*(it.win[1]-it.win[0]);
+  libDrag={c,it,edge:Math.abs(t-it.span[0])<=Math.abs(t-it.span[1])?0:1}; try{ c.setPointerCapture(e.pointerId); }catch(err){} libMove(e); });
+function libMove(e){ if(!libDrag) return; const {c,it,edge}=libDrag, r=c.getBoundingClientRect();
+  let t=it.win[0]+Math.min(1,Math.max(0,(e.clientX-r.left)/r.width))*(it.win[1]-it.win[0]); t=Math.round(t*100)/100;
+  it.span[edge]=edge?Math.max(t,it.span[0]+0.08):Math.min(t,it.span[1]-0.08);
+  const el=c.closest('.clip'); el.querySelector('[data-len]').textContent=(it.span[1]-it.span[0]).toFixed(2)+' s'; drawClip(el,true); }
+$('#libList').addEventListener('pointermove',libMove);
+const libEnd=()=>{ if(!libDrag) return; const it=libDrag.it; libDrag=null; libSave(it); const el=[...$('#libList').querySelectorAll('.clip')].find(x=>libMap.get(x.dataset.id)===it); if(el) drawClip(el); };
+$('#libList').addEventListener('pointerup',libEnd); $('#libList').addEventListener('pointercancel',libEnd);
+$('#libBtn').addEventListener('click',()=>{ $('#libPanel').hidden=false; renderLib(); $('#libPanel').scrollIntoView({behavior:'smooth',block:'start'}); });
+$('#libClose').addEventListener('click',()=>{ $('#libPanel').hidden=true; try{ libSrc&&libSrc.stop(); }catch(e){} });
+
 function getCal(){ try{ return JSON.parse(localStorage.getItem(calKey())||'null'); }catch(e){ return null; } }
 function calFor(m,preset){ const c=getCal(); return c&&c.use&&c.model===m.key&&c.presets[preset]?c.presets[preset]:null; }
 function smooth5(P){ const S=new Float32Array(P.length); for(let i=0;i<P.length;i++){ let s=0; for(let j=Math.max(0,i-4);j<=i;j++) s+=P[j]; S[i]=s/5; } return S; }
@@ -731,9 +831,9 @@ function calScore(S,refs,thr,K){ // == makeLocalDetector's rule; a fire within 0
 }
 async function calibrate(){
   const m=await loadLocalModel(), S=metas.filter(s=>s.done&&s.model===m.key);
-  const hours=S.reduce((a,s)=>a+s.dur,0)/3600, n=S.reduce((a,s)=>a+s.alerts.filter(x=>x.label==='real').length+s.missed.length,0);
+  const hours=S.reduce((a,s)=>a+s.dur,0)/3600, n=S.reduce((a,s)=>a+s.alerts.filter(x=>x.label==='real').length+s.missed.filter(t=>missOn(s,t)).length,0);
   if(hours*60<3||n<8){ $('#calNote').textContent=`Needs at least 3 minutes and 8 ums of fully marked recordings for this model; you have ${(hours*60).toFixed(1)} min and ${n} ums. Tick "I've marked every um" on each recording you finish.`; return; }
-  const data=S.map(s=>({S:smooth5(s.probs), refs:[...s.alerts.filter(a=>a.label==='real').map(a=>a.t),...s.missed].sort((a,b)=>a-b)}));
+  const data=S.map(s=>({S:smooth5(s.probs), refs:[...s.alerts.filter(a=>a.label==='real').map(a=>a.t),...s.missed.filter(t=>missOn(s,t))].sort((a,b)=>a-b)}));
   const run=(thr,K)=>{ let h=0,f=0; for(const d of data){ const [a,b]=calScore(d.S,d.refs,thr,K); h+=a; f+=b; } return {thr,K,h,f}; };
   const grid=[]; for(let i=0;i<=34;i++) for(const K of CAL_KS) grid.push(run(Math.round((0.30+i*0.02)*100)/100,K));
   const out={model:m.key, date:new Date().toISOString(), minutes:+(hours*60).toFixed(1), ums:n, presets:{}, use:true}, rows=[];
