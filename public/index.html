@@ -20,6 +20,7 @@
   --bg:#141613; --panel:#1d201c; --fg:#ecefe8; --muted:#9aa095; --line:#2f332d;
   --accent:#ff5a3d; --accent-ink:#141613; --ok:#5fc27f; --warn:#e2a03f; color-scheme:dark}}
 *{box-sizing:border-box}
+[hidden]{display:none!important} /* .panel/.row set display, which would otherwise override the hidden attribute */
 html,body{margin:0}
 body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--body);
   padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
@@ -96,6 +97,20 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
 .pill input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
 .pill:active span{transform:scale(.97)}
 @media (hover:hover){.pill:hover input:not(:checked)+span{border-color:var(--accent)}}
+/* review & calibrate */
+:root{--miss:#2f6fd6}
+@media (prefers-color-scheme:dark){:root{--miss:#6aa1ff}}
+#tl{width:100%;height:96px;display:block;border-radius:10px;background:var(--bg);border:1px solid var(--line);cursor:pointer;touch-action:manipulation}
+.alist{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto}
+.arow{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:12px}
+.arow .t{font:600 14px var(--mono);font-variant-numeric:tabular-nums;min-width:48px}
+.arow .what{font-size:13px;color:var(--muted);flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.arow .ibtn{flex:none}
+.ibtn{font:600 13px var(--body);border:1.5px solid var(--line);background:var(--panel);color:var(--fg);border-radius:999px;padding:0 12px;min-height:38px;cursor:pointer;touch-action:manipulation}
+.ibtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.ibtn.yes[aria-pressed=true]{background:var(--ok);border-color:var(--ok);color:#fff}
+.ibtn.no[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.calcard{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:10px}
 @media (prefers-reduced-motion:reduce){#flash{transition:none}.start.live{animation:none}}
 </style>
 </head>
@@ -139,6 +154,7 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
       <label style="flex:0 1 220px">Detector sensitivity
         <select id="sens"><option value="sensitive">Sensitive (catches more, more false alerts)</option><option value="balanced" selected>Balanced</option><option value="strict">Strict (fewer false alerts)</option></select>
       </label>
+      <label class="chip"><input type="checkbox" id="keepRec" checked> Keep a recording to review (stays on this device)</label>
     </div>
     <p class="note" id="localNote" hidden>On-device model v8 (170k parameters, 24 Oct 2026, trained with background noise, room echo and phone-mic effects, and listening to pitch steadiness as well as the sound) that listens for um/uh/er. No audio leaves your phone. On a 3.1-hour real podcast test (928 ums) it caught about 81% / 71% / 48% of ums at roughly 63 / 26 / 9 false alerts per hour (sensitive / balanced / strict). With noise added (café chatter, street, music, a room, a pocket) it still caught 57–66% at 25 false alerts per hour or fewer.</p>
     <p class="note" id="dgNote" hidden>Your key stays in this browser and goes only to Deepgram. Use a key you can revoke.</p>
@@ -172,6 +188,34 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
     </div>
     <div class="tally" id="tally"></div>
     <div class="transcript" id="transcript" aria-live="polite">Transcript appears here.</div>
+  </section>
+
+  <section class="panel" id="reviewPanel" hidden>
+    <div class="row" style="justify-content:space-between;align-items:center">
+      <h2>Review &amp; calibrate</h2>
+      <select id="sessSel" aria-label="Recording" style="flex:1 1 200px;max-width:320px"></select>
+    </div>
+    <p class="note">Play the recording back. Mark each alert as a real um or not, and tap <b>+ Missed um</b> where it missed one. Recordings stay in this browser.</p>
+    <canvas id="tl" aria-label="Timeline: tap to jump there"></canvas>
+    <p class="note">Line: um likelihood · dashed: alert threshold · <span class="good">●</span> real · <span class="bad">✕</span> not an um · ○ unmarked · <span style="color:var(--miss)">▲</span> missed</p>
+    <audio id="player" controls preload="auto" style="width:100%"></audio>
+    <div class="row" style="align-items:center">
+      <button class="btn secondary" id="missBtn">+ Missed um here</button>
+      <span class="note" id="revStats"></span>
+    </div>
+    <div class="alist" id="alist"></div>
+    <label class="chip" style="align-self:flex-start"><input type="checkbox" id="revDone"> I've marked every um in this recording</label>
+    <div class="row">
+      <button class="btn secondary" id="expBtn">Export (WAV + labels)</button>
+      <button class="btn secondary" id="delBtn">Delete recording</button>
+    </div>
+    <div class="calcard">
+      <h2>Calibrate to my voice</h2>
+      <p class="note" id="calNote"></p>
+      <button class="btn secondary" id="calBtn">Calibrate from my marked recordings</button>
+      <div class="scroll"><table id="calTable" hidden><thead><tr><th>Setting</th><th>Standard</th><th>Yours</th></tr></thead><tbody></tbody></table></div>
+      <label class="chip" style="align-self:flex-start"><input type="checkbox" id="useCal" disabled> Use my calibration</label>
+    </div>
   </section>
 
   <section class="panel" id="latencyPanel" hidden>
@@ -454,10 +498,11 @@ async function loadLocalModel(){
     m.rw=new Float64Array(j.nfft); for(let l=0;l<j.nfft;l++){let s=0;for(let n=0;n+l<j.nfft;n++)s+=m.win[n]*m.win[n+l];m.rw[l]=s;}
     for(let l=j.nfft-1;l>=0;l--) m.rw[l]=Math.max(0.05, m.rw[l]/m.rw[0]);
   }
+  let hsh=5381; for(const ch of j.ow+j.ob) hsh=((hsh*33)^ch.charCodeAt(0))>>>0; m.key=j.kind+'-'+j.d+'-'+hsh.toString(36); // identifies the model for calibration
   LM=m; return m;
 }
-function makeLocalDetector(m, preset, onFire, onProb){
-  const H=m.h, D=m.d, thr=m.presets[preset][0], K=m.presets[preset][1];
+function makeLocalDetector(m, preset, onFire, onProb, cfg){ // cfg: optional [thr, k] from personal calibration
+  const H=m.h, D=m.d, thr=cfg?cfg[0]:m.presets[preset][0], K=cfg?cfg[1]:m.presets[preset][1];
   const fr=new Float32Array(m.nfft), pw=new Float32Array(m.nb);
   // causal conv histories (newest last)
   const h0=[], h1=[], h2=[]; for(let i=0;i<5;i++) h0.push(new Float32Array(D)); for(let i=0;i<9;i++) h1.push(new Float32Array(H)); for(let i=0;i<17;i++) h2.push(new Float32Array(H));
@@ -523,17 +568,22 @@ async function startLocal(){
   lstream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
   try{ lctx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:16000}); }catch(e){ lctx=new (window.AudioContext||window.webkitAudioContext)(); }
   const ratio=lctx.sampleRate/16000; let carry=0;
-  const preset=(document.getElementById('sens')||{}).value||'balanced';
-  const det=makeLocalDetector(m, preset, ()=>fire('snd', null));
+  const preset=(document.getElementById('sens')||{}).value||'balanced', cfg=calFor(m, preset);
+  const used=cfg||m.presets[preset];
+  session = $('#keepRec').checked ? {id:Date.now(), date:new Date().toISOString(), model:m.key, preset, cfg:used, personal:!!cfg, chunks:[], n:0, probs:[], alerts:[], missed:[], done:false} : null;
+  const det=makeLocalDetector(m, preset, ()=>{ fire('snd', null); if(session) session.alerts.push({t:session.probs.length/100, label:null}); },
+                              p=>{ if(session) session.probs.push(p); }, cfg);
+  if(cfg) $('#status').textContent+=' · your calibration';
+  const feed=a=>{ det.push(a); if(session && session.n<MAX_REC_S*16000){ const q=new Int16Array(a.length); for(let i=0;i<a.length;i++) q[i]=Math.max(-32768,Math.min(32767,Math.round(a[i]*32767))); session.chunks.push(q); session.n+=a.length; } };
   const src=lctx.createMediaStreamSource(lstream); lproc=lctx.createScriptProcessor(2048,1,1);
   const mute=lctx.createGain(); mute.gain.value=0;
   lproc.onaudioprocess=e=>{
     const x=e.inputBuffer.getChannelData(0);
-    if(ratio===1){ det.push(new Float32Array(x)); return; }
+    if(ratio===1){ feed(new Float32Array(x)); return; }
     const n=Math.floor((x.length-carry)/ratio), out=new Float32Array(Math.max(0,n)), w=Math.max(1,Math.round(ratio));
     for(let i=0;i<n;i++){const pos=carry+i*ratio, i0=Math.floor(pos); let s=0,c=0; for(let k=0;k<w;k++){const j=i0-k; if(j>=0){s+=x[j];c++;}} out[i]=c?s/c:0;}
     carry=(carry+n*ratio)-x.length; if(carry<0) carry=0;
-    det.push(out);
+    feed(out);
   };
   src.connect(lproc); lproc.connect(mute); mute.connect(lctx.destination);
 }
@@ -542,6 +592,137 @@ function stopLocal(){
   try{lctx&&lctx.close();}catch(e){} lctx=null;
   try{lstream&&lstream.getTracks().forEach(t=>t.stop());}catch(e){} lstream=null;
 }
+
+// ---------- Review & calibration (sound detector only; recordings and marks stay in this browser) ----------
+const MAX_REC_S=20*60, CAL_CAPS={sensitive:60,balanced:25,strict:10}, CAL_KS=[2,4,6,8,10,12,16];
+let session=null, cur=null, metas=[], curUrl=null, snipTimer=null, dbp=null;
+function db(){ return dbp||(dbp=new Promise((res,rej)=>{ const r=indexedDB.open('fk-review',1);
+  r.onupgradeneeded=()=>{ r.result.createObjectStore('meta',{keyPath:'id'}); r.result.createObjectStore('audio'); };
+  r.onsuccess=()=>res(r.result); r.onerror=()=>rej(r.error); })); }
+function tx(store,mode,fn){ return db().then(d=>new Promise((res,rej)=>{ const t=d.transaction(store,mode), r=fn(t.objectStore(store));
+  t.oncomplete=()=>res(r&&r.result); t.onerror=()=>rej(t.error); t.onabort=()=>rej(t.error); })); }
+const dbPutMeta=m=>tx('meta','readwrite',s=>s.put(m)), dbGetAudio=id=>tx('audio','readonly',s=>s.get(id));
+const fmtT2=s=>fmtT(s)+'.'+Math.floor((s%1)*10);
+function wavBlob(a){ // 16 kHz mono 16-bit PCM
+  const b=new ArrayBuffer(44+a.length*2), v=new DataView(b), w=(o,s)=>{for(let i=0;i<s.length;i++)v.setUint8(o+i,s.charCodeAt(i));};
+  w(0,'RIFF'); v.setUint32(4,36+a.length*2,true); w(8,'WAVEfmt '); v.setUint32(16,16,true); v.setUint16(20,1,true); v.setUint16(22,1,true);
+  v.setUint32(24,16000,true); v.setUint32(28,32000,true); v.setUint16(32,2,true); v.setUint16(34,16,true); w(36,'data'); v.setUint32(40,a.length*2,true);
+  new Int16Array(b,44).set(a); return new Blob([b],{type:'audio/wav'});
+}
+async function finishSession(){
+  const s=session; session=null; if(!s || s.probs.length<200) return;           // ignore recordings under 2 s
+  const a=new Int16Array(s.n); let o=0; for(const c of s.chunks){ a.set(c,o); o+=c.length; }
+  const meta={id:s.id, date:s.date, model:s.model, preset:s.preset, cfg:s.cfg, personal:s.personal, probs:new Float32Array(s.probs),
+              dur:s.probs.length/100, alerts:s.alerts, missed:[], done:false};
+  try{ await dbPutMeta(meta); await tx('audio','readwrite',st=>st.put(a,s.id)); }
+  catch(e){ showErr('Could not keep the recording for review (browser storage is full or blocked).'); return; }
+  await refreshSessions(s.id);
+}
+async function refreshSessions(selectId){
+  metas=(await tx('meta','readonly',s=>s.getAll()).catch(()=>[])||[]).sort((a,b)=>b.id-a.id);
+  $('#reviewPanel').hidden=!metas.length; if(!metas.length){ cur=null; return; }
+  $('#sessSel').innerHTML=metas.map(m=>`<option value="${m.id}">${new Date(m.date).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} · ${fmtT(m.dur)} · ${m.alerts.length} alerts${m.done?' · ✓ marked':''}</option>`).join('');
+  const id=selectId ?? (cur&&metas.some(m=>m.id===cur.id)?cur.id:metas[0].id);
+  $('#sessSel').value=String(id); await openSession(id); calRefresh();
+}
+async function openSession(id){
+  cur=metas.find(m=>m.id===+id); if(!cur) return;
+  const a=await dbGetAudio(cur.id).catch(()=>null);
+  if(curUrl) URL.revokeObjectURL(curUrl); curUrl=a?URL.createObjectURL(wavBlob(a)):null;
+  if(curUrl) $('#player').src=curUrl; else $('#player').removeAttribute('src');
+  $('#revDone').checked=!!cur.done; renderReview();
+}
+function saveCur(){ if(cur) dbPutMeta(cur).catch(()=>showErr('Could not save your marks.')); }
+function renderReview(){
+  if(!cur) return;
+  const items=[...cur.alerts.map((a,i)=>({t:a.t,kind:'alert',i})), ...cur.missed.map((t,i)=>({t,kind:'miss',i}))].sort((x,y)=>x.t-y.t);
+  $('#alist').innerHTML=items.length ? items.map(it=>{ const t=fmtT2(it.t), play=`<button class="ibtn" data-play="${it.t}" aria-label="Play around ${t}">▶</button>`;
+    if(it.kind==='miss') return `<div class="arow"><span class="t">${t}</span>${play}<span class="what" style="color:var(--miss)">▲ Missed um</span><button class="ibtn" data-delmiss="${it.i}" aria-label="Remove missed um at ${t}">Remove</button></div>`;
+    const l=cur.alerts[it.i].label;
+    return `<div class="arow"><span class="t">${t}</span>${play}<span class="what"></span><button class="ibtn yes" data-mark="${it.i}" data-v="real" aria-pressed="${l==='real'}" aria-label="Real um at ${t}">✓ Real</button><button class="ibtn no" data-mark="${it.i}" data-v="not" aria-pressed="${l==='not'}" aria-label="Not an um at ${t}">✕ Not</button></div>`;
+  }).join('') : '<p class="note">No alerts in this recording. Add any ums it missed while you listen.</p>';
+  const real=cur.alerts.filter(a=>a.label==='real').length, not=cur.alerts.filter(a=>a.label==='not').length;
+  $('#revStats').textContent=`${cur.alerts.length} alerts: ${real} real, ${not} not, ${cur.alerts.length-real-not} unmarked · ${cur.missed.length} missed added`;
+  drawTl();
+}
+const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+function drawTl(){
+  const c=$('#tl'); if(!cur||!c.clientWidth) return; const dpr=devicePixelRatio||1, W=c.clientWidth, H=c.clientHeight;
+  if(c.width!==Math.round(W*dpr)||c.height!==Math.round(H*dpr)){ c.width=Math.round(W*dpr); c.height=Math.round(H*dpr); }
+  const g=c.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
+  const P=cur.probs, top=16, bot=H-16, y=v=>bot-(bot-top)*v, x=t=>t/cur.dur*W;
+  g.strokeStyle=cssv('--muted'); g.lineWidth=1.2; g.beginPath();
+  for(let px=0;px<W;px++){ const i0=Math.floor(px/W*P.length), i1=Math.max(i0+1,Math.floor((px+1)/W*P.length)); let mx=0;
+    for(let i=i0;i<i1&&i<P.length;i++) mx=Math.max(mx,P[i]); px?g.lineTo(px,y(mx)):g.moveTo(px,y(mx)); }
+  g.stroke();
+  g.setLineDash([4,4]); g.strokeStyle=cssv('--accent'); g.beginPath(); g.moveTo(0,y(cur.cfg[0])); g.lineTo(W,y(cur.cfg[0])); g.stroke(); g.setLineDash([]);
+  g.font='bold 12px system-ui'; g.textAlign='center';
+  for(const a of cur.alerts){ const X=x(a.t);
+    if(a.label==='real'){ g.fillStyle=cssv('--ok'); g.beginPath(); g.arc(X,8,5,0,7); g.fill(); }
+    else if(a.label==='not'){ g.fillStyle=cssv('--accent'); g.fillText('✕',X,12); }
+    else { g.strokeStyle=cssv('--fg'); g.lineWidth=1.5; g.beginPath(); g.arc(X,8,4.5,0,7); g.stroke(); } }
+  g.fillStyle=cssv('--miss'); for(const t of cur.missed){ const X=x(t); g.beginPath(); g.moveTo(X,H-13); g.lineTo(X-5,H-3); g.lineTo(X+5,H-3); g.fill(); }
+  const p=$('#player'); if(p.getAttribute('src')){ const X=x(p.currentTime||0); g.strokeStyle=cssv('--fg'); g.lineWidth=1.5; g.beginPath(); g.moveTo(X,0); g.lineTo(X,H); g.stroke(); }
+}
+function playAround(t){ const p=$('#player'); if(!p.getAttribute('src')) return; clearTimeout(snipTimer); p.currentTime=Math.max(0,t-1.5); p.play().catch(()=>{}); snipTimer=setTimeout(()=>p.pause(),2300); }
+$('#alist').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b||!cur) return;
+  if(b.dataset.play!==undefined) return playAround(+b.dataset.play);
+  if(b.dataset.mark!==undefined){ const a=cur.alerts[+b.dataset.mark]; a.label=a.label===b.dataset.v?null:b.dataset.v; }
+  else if(b.dataset.delmiss!==undefined) cur.missed.splice(+b.dataset.delmiss,1);
+  saveCur(); renderReview(); });
+$('#missBtn').addEventListener('click',()=>{ if(!cur) return; const t=Math.max(0,($('#player').currentTime||0)-0.3); cur.missed.push(Math.round(t*100)/100); saveCur(); renderReview(); });
+$('#revDone').addEventListener('change',e=>{ if(!cur) return; cur.done=e.target.checked; saveCur(); refreshSessions(cur.id); });
+$('#sessSel').addEventListener('change',e=>openSession(e.target.value));
+$('#player').addEventListener('play',()=>{ const loop=()=>{ drawTl(); if(!$('#player').paused) requestAnimationFrame(loop); }; loop(); });
+$('#player').addEventListener('pause',()=>{ clearTimeout(snipTimer); drawTl(); });
+$('#player').addEventListener('seeked',drawTl);
+$('#tl').addEventListener('click',e=>{ if(!cur) return; const r=e.currentTarget.getBoundingClientRect(), p=$('#player');
+  if(p.getAttribute('src')) p.currentTime=Math.max(0,Math.min((e.clientX-r.left)/r.width*cur.dur,(p.duration||cur.dur)-0.05)); drawTl(); });
+addEventListener('resize',drawTl);
+$('#expBtn').addEventListener('click',async()=>{ if(!cur) return; const stamp=cur.date.slice(0,16).replace(/[:T]/g,'-');
+  const dl=(blob,name)=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500); };
+  const j={app:'Filler Killer Lab', date:cur.date, model:cur.model, preset:cur.preset, threshold:cur.cfg, personalCalibration:cur.personal, durationS:cur.dur,
+    reviewedCompletely:cur.done, alerts:cur.alerts.map(a=>({t:a.t,label:a.label||'unmarked'})), missedUms:cur.missed, probs100fps:Array.from(cur.probs,v=>Math.round(v*1000)/1000)};
+  dl(new Blob([JSON.stringify(j)],{type:'application/json'}),`filler-killer-${stamp}.json`);
+  const au=await dbGetAudio(cur.id).catch(()=>null); if(au) setTimeout(()=>dl(wavBlob(au),`filler-killer-${stamp}.wav`),400); });
+$('#delBtn').addEventListener('click',async()=>{ if(!cur||!confirm('Delete this recording and its marks from this device?')) return; const id=cur.id;
+  await tx('meta','readwrite',s=>s.delete(id)).catch(()=>{}); await tx('audio','readwrite',s=>s.delete(id)).catch(()=>{}); cur=null; refreshSessions(); });
+
+// personal calibration: replay saved probabilities through the live alert rule for every threshold/k, keep the presets' false-alert caps
+function getCal(){ try{ return JSON.parse(localStorage.getItem('fk_cal')||'null'); }catch(e){ return null; } }
+function calFor(m,preset){ const c=getCal(); return c&&c.use&&c.model===m.key&&c.presets[preset]?c.presets[preset]:null; }
+function smooth5(P){ const S=new Float32Array(P.length); for(let i=0;i<P.length;i++){ let s=0; for(let j=Math.max(0,i-4);j<=i;j++) s+=P[j]; S[i]=s/5; } return S; }
+function calScore(S,refs,thr,K){ // == makeLocalDetector's rule; a fire within 0.8 s of a marked um is a hit
+  const used=new Array(refs.length).fill(false); let run=0,last=-9,h=0,f=0;
+  for(let i=0;i<S.length;i++){ run=S[i]>=thr?run+1:0; const t=(i+1)/100;
+    if(run===K&&t-last>0.35){ last=t; let m=-1; for(let j=0;j<refs.length;j++) if(!used[j]&&Math.abs(t-refs[j])<=0.8){m=j;break;} if(m>=0){used[m]=true;h++;} else f++; } }
+  return [h,f];
+}
+async function calibrate(){
+  const m=await loadLocalModel(), S=metas.filter(s=>s.done&&s.model===m.key);
+  const hours=S.reduce((a,s)=>a+s.dur,0)/3600, n=S.reduce((a,s)=>a+s.alerts.filter(x=>x.label==='real').length+s.missed.length,0);
+  if(hours*60<3||n<8){ $('#calNote').textContent=`Needs at least 3 minutes and 8 ums of fully marked recordings for this model; you have ${(hours*60).toFixed(1)} min and ${n} ums. Tick "I've marked every um" on each recording you finish.`; return; }
+  const data=S.map(s=>({S:smooth5(s.probs), refs:[...s.alerts.filter(a=>a.label==='real').map(a=>a.t),...s.missed].sort((a,b)=>a-b)}));
+  const run=(thr,K)=>{ let h=0,f=0; for(const d of data){ const [a,b]=calScore(d.S,d.refs,thr,K); h+=a; f+=b; } return {thr,K,h,f}; };
+  const grid=[]; for(let i=0;i<=34;i++) for(const K of CAL_KS) grid.push(run(Math.round((0.30+i*0.02)*100)/100,K));
+  const out={model:m.key, date:new Date().toISOString(), minutes:+(hours*60).toFixed(1), ums:n, presets:{}, use:true}, rows=[];
+  for(const [name,cap] of Object.entries(CAL_CAPS)){
+    const best=grid.filter(r=>r.f/hours<=cap).sort((a,b)=>b.h-a.h||a.f-b.f)[0], std=run(...m.presets[name]);
+    if(best) out.presets[name]=[best.thr,best.K];
+    rows.push(`<tr><td>${name[0].toUpperCase()+name.slice(1)}</td><td>${std.h}/${n} · ${std.f} false</td><td>${best?`${best.h}/${n} · ${best.f} false`:'–'}</td></tr>`);
+  }
+  try{ localStorage.setItem('fk_cal',JSON.stringify(out)); }catch(e){ showErr('Could not save the calibration in this browser.'); }
+  $('#calTable tbody').innerHTML=rows.join(''); $('#calTable').hidden=false; calRefresh();
+}
+async function calRefresh(){
+  const c=getCal(), m=await loadLocalModel().catch(()=>null), ok=!!(c&&m&&c.model===m.key);
+  $('#useCal').disabled=!ok; $('#useCal').checked=ok&&c.use;
+  $('#calNote').textContent=!c ? 'Not calibrated yet. Mark at least 3 minutes of recordings (every um), then calibrate.'
+    : !ok ? 'Your calibration was made for a different model version. Mark a new recording and calibrate again.'
+    : `Calibrated ${new Date(c.date).toLocaleDateString()} from ${c.minutes} min and ${c.ums} of your ums (ums caught · false alerts, standard vs yours). More marked recordings make it more reliable.`;
+}
+$('#calBtn').addEventListener('click',calibrate);
+$('#useCal').addEventListener('change',e=>{ const c=getCal(); if(!c) return; c.use=e.target.checked; try{ localStorage.setItem('fk_cal',JSON.stringify(c)); }catch(err){} });
 
 // ---------- Start / stop ----------
 function showErr(m){$('#err').textContent=m;$('#err').hidden=false;}
@@ -561,7 +742,7 @@ function stop(){
   try{rec&&rec.stop();}catch(e){} rec=null;
   try{ if(ws&&ws.readyState===1){ws.send(JSON.stringify({type:'CloseStream'}));} ws&&setTimeout(()=>{try{ws.close()}catch(e){}},1500);}catch(e){}
   try{proc&&proc.disconnect();}catch(e){} proc=null;
-  stopLocal();
+  stopLocal(); finishSession();
   try{ctx&&ctx.close();}catch(e){} ctx=null;
   try{stream&&stream.getTracks().forEach(t=>t.stop());}catch(e){} stream=null;
   try{wakeLock&&wakeLock.release();}catch(e){} wakeLock=null;
@@ -584,7 +765,7 @@ $('#copyBtn').addEventListener('click',()=>{
   const fb=()=>{const t=$('#copyFallback');t.hidden=false;t.value=text;t.select();};
   try{ navigator.clipboard.writeText(text).then(()=>{$('#copyBtn').textContent='Copied';setTimeout(()=>$('#copyBtn').textContent='Copy results',1500);},fb);}catch(e){fb();}
 });
-render();
+render(); refreshSessions();
 </script>
 </body>
 </html>
