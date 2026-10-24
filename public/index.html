@@ -126,6 +126,13 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
   </header>
 
   <section class="panel" aria-label="Setup">
+    <div class="row" style="flex-wrap:nowrap;gap:8px">
+      <label style="flex:1 1 auto">Who's talking
+        <select id="who"></select>
+      </label>
+      <button class="btn secondary" id="whoAdd" aria-label="Add a person" style="flex:none">+ Add</button>
+      <button class="btn secondary" id="whoDel" aria-label="Remove this person" style="flex:none">Remove</button>
+    </div>
     <details class="fold" id="engineFold">
     <summary><span class="status">Speech engine</span><span class="sumval" id="engineSum"></span></summary>
     <div class="foldbody">
@@ -192,7 +199,7 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
 
   <section class="panel" id="reviewPanel" hidden>
     <div class="row" style="justify-content:space-between;align-items:center">
-      <h2>Review &amp; calibrate</h2>
+      <h2>Review &amp; calibrate · <span id="whoName"></span></h2>
       <select id="sessSel" aria-label="Recording" style="flex:1 1 200px;max-width:320px"></select>
     </div>
     <p class="note">Play the recording back. Mark each alert as a real um or not, and tap <b>+ Missed um</b> where it missed one. Recordings stay in this browser.</p>
@@ -570,7 +577,7 @@ async function startLocal(){
   const ratio=lctx.sampleRate/16000; let carry=0;
   const preset=(document.getElementById('sens')||{}).value||'balanced', cfg=calFor(m, preset);
   const used=cfg||m.presets[preset];
-  session = $('#keepRec').checked ? {id:Date.now(), date:new Date().toISOString(), model:m.key, preset, cfg:used, personal:!!cfg, chunks:[], n:0, probs:[], alerts:[], missed:[], done:false} : null;
+  session = $('#keepRec').checked ? {id:Date.now(), date:new Date().toISOString(), profile:who(), model:m.key, preset, cfg:used, personal:!!cfg, chunks:[], n:0, probs:[], alerts:[], missed:[], done:false} : null;
   const det=makeLocalDetector(m, preset, ()=>{ fire('snd', null); if(session) session.alerts.push({t:session.probs.length/100, label:null}); },
                               p=>{ if(session) session.probs.push(p); }, cfg);
   if(cfg) $('#status').textContent+=' · your calibration';
@@ -612,14 +619,16 @@ function wavBlob(a){ // 16 kHz mono 16-bit PCM
 async function finishSession(){
   const s=session; session=null; if(!s || s.probs.length<200) return;           // ignore recordings under 2 s
   const a=new Int16Array(s.n); let o=0; for(const c of s.chunks){ a.set(c,o); o+=c.length; }
-  const meta={id:s.id, date:s.date, model:s.model, preset:s.preset, cfg:s.cfg, personal:s.personal, probs:new Float32Array(s.probs),
+  const meta={id:s.id, date:s.date, profile:s.profile, model:s.model, preset:s.preset, cfg:s.cfg, personal:s.personal, probs:new Float32Array(s.probs),
               dur:s.probs.length/100, alerts:s.alerts, missed:[], done:false};
   try{ await dbPutMeta(meta); await tx('audio','readwrite',st=>st.put(a,s.id)); }
   catch(e){ showErr('Could not keep the recording for review (browser storage is full or blocked).'); return; }
   await refreshSessions(s.id);
 }
 async function refreshSessions(selectId){
-  metas=(await tx('meta','readonly',s=>s.getAll()).catch(()=>[])||[]).sort((a,b)=>b.id-a.id);
+  const all=await tx('meta','readonly',s=>s.getAll()).catch(()=>[])||[], first=profs().list[0];
+  for(const m of all) if(!m.profile){ m.profile=first; dbPutMeta(m).catch(()=>{}); }   // recordings made before profiles existed
+  metas=all.filter(m=>m.profile===who()).sort((a,b)=>b.id-a.id); $('#whoName').textContent=who();
   $('#reviewPanel').hidden=!metas.length; if(!metas.length){ cur=null; return; }
   $('#sessSel').innerHTML=metas.map(m=>`<option value="${m.id}">${new Date(m.date).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} · ${fmtT(m.dur)} · ${m.alerts.length} alerts${m.done?' · ✓ marked':''}</option>`).join('');
   const id=selectId ?? (cur&&metas.some(m=>m.id===cur.id)?cur.id:metas[0].id);
@@ -689,7 +698,29 @@ $('#delBtn').addEventListener('click',async()=>{ if(!cur||!confirm('Delete this 
   await tx('meta','readwrite',s=>s.delete(id)).catch(()=>{}); await tx('audio','readwrite',s=>s.delete(id)).catch(()=>{}); cur=null; refreshSessions(); });
 
 // personal calibration: replay saved probabilities through the live alert rule for every threshold/k, keep the presets' false-alert caps
-function getCal(){ try{ return JSON.parse(localStorage.getItem('fk_cal')||'null'); }catch(e){ return null; } }
+// people sharing this device: each has their own recordings (meta.profile) and calibration (localStorage fk_cal:<name>)
+function profs(){ try{ const p=JSON.parse(localStorage.getItem('fk_profiles')||'null'); if(p&&p.list&&p.list.length) return p; }catch(e){} return {list:['Me'],current:'Me'}; }
+function saveProfs(p){ try{ localStorage.setItem('fk_profiles',JSON.stringify(p)); }catch(e){} }
+const who=()=>profs().current, calKey=()=>'fk_cal:'+who();
+try{ const old=localStorage.getItem('fk_cal'); if(old!==null){ const k='fk_cal:'+profs().list[0]; if(localStorage.getItem(k)===null) localStorage.setItem(k,old); localStorage.removeItem('fk_cal'); } }catch(e){}
+function renderWho(){ const p=profs(), s=$('#who');
+  s.replaceChildren(...p.list.map(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=n; return o; })); s.value=p.current; $('#whoDel').disabled=p.list.length<2; }
+function switchWho(){ cur=null; renderWho(); refreshSessions(); }
+$('#who').addEventListener('change',e=>{ const p=profs();
+  if(running){ e.target.value=p.current; return showErr('Stop listening before changing who is talking.'); }
+  p.current=e.target.value; saveProfs(p); switchWho(); });
+$('#whoAdd').addEventListener('click',()=>{ if(running) return showErr('Stop listening before changing who is talking.');
+  const n=(prompt('Name of the person to add:')||'').trim().slice(0,30); if(!n) return;
+  const p=profs(); if(!p.list.includes(n)) p.list.push(n); p.current=n; saveProfs(p); switchWho(); });
+$('#whoDel').addEventListener('click',async()=>{ const p=profs(), n=p.current;
+  if(p.list.length<2||!confirm(`Remove ${n} from this device, with their recordings and calibration?`)) return;
+  const all=await tx('meta','readonly',s=>s.getAll()).catch(()=>[])||[];
+  for(const m of all.filter(m=>m.profile===n)){ await tx('meta','readwrite',s=>s.delete(m.id)).catch(()=>{}); await tx('audio','readwrite',s=>s.delete(m.id)).catch(()=>{}); }
+  try{ localStorage.removeItem('fk_cal:'+n); }catch(e){}
+  p.list=p.list.filter(x=>x!==n); p.current=p.list[0]; saveProfs(p); switchWho(); });
+renderWho();
+
+function getCal(){ try{ return JSON.parse(localStorage.getItem(calKey())||'null'); }catch(e){ return null; } }
 function calFor(m,preset){ const c=getCal(); return c&&c.use&&c.model===m.key&&c.presets[preset]?c.presets[preset]:null; }
 function smooth5(P){ const S=new Float32Array(P.length); for(let i=0;i<P.length;i++){ let s=0; for(let j=Math.max(0,i-4);j<=i;j++) s+=P[j]; S[i]=s/5; } return S; }
 function calScore(S,refs,thr,K){ // == makeLocalDetector's rule; a fire within 0.8 s of a marked um is a hit
@@ -711,7 +742,7 @@ async function calibrate(){
     if(best) out.presets[name]=[best.thr,best.K];
     rows.push(`<tr><td>${name[0].toUpperCase()+name.slice(1)}</td><td>${std.h}/${n} · ${std.f} false</td><td>${best?`${best.h}/${n} · ${best.f} false`:'–'}</td></tr>`);
   }
-  try{ localStorage.setItem('fk_cal',JSON.stringify(out)); }catch(e){ showErr('Could not save the calibration in this browser.'); }
+  try{ localStorage.setItem(calKey(),JSON.stringify(out)); }catch(e){ showErr('Could not save the calibration in this browser.'); }
   $('#calTable tbody').innerHTML=rows.join(''); $('#calTable').hidden=false; calRefresh();
 }
 async function calRefresh(){
@@ -722,7 +753,7 @@ async function calRefresh(){
     : `Calibrated ${new Date(c.date).toLocaleDateString()} from ${c.minutes} min and ${c.ums} of your ums (ums caught · false alerts, standard vs yours). More marked recordings make it more reliable.`;
 }
 $('#calBtn').addEventListener('click',calibrate);
-$('#useCal').addEventListener('change',e=>{ const c=getCal(); if(!c) return; c.use=e.target.checked; try{ localStorage.setItem('fk_cal',JSON.stringify(c)); }catch(err){} });
+$('#useCal').addEventListener('change',e=>{ const c=getCal(); if(!c) return; c.use=e.target.checked; try{ localStorage.setItem(calKey(),JSON.stringify(c)); }catch(err){} });
 
 // ---------- Start / stop ----------
 function showErr(m){$('#err').textContent=m;$('#err').hidden=false;}
@@ -732,7 +763,7 @@ async function start(){
   try{ beepCtx=beepCtx||new (window.AudioContext||window.webkitAudioContext)(); await beepCtx.resume(); }catch(e){}
   try{ wakeLock=await navigator.wakeLock?.request('screen'); }catch(e){}
   t0=performance.now(); running=true;
-  $('#startBtn').textContent='Stop'; $('#startBtn').classList.add('live'); $('#status').textContent='Listening · '+ENGINE_NAME[engine]; $('#status').classList.add('live');
+  $('#startBtn').textContent='Stop'; $('#startBtn').classList.add('live'); $('#status').textContent='Listening · '+ENGINE_NAME[engine]+' · '+who(); $('#status').classList.add('live');
   timer=setInterval(tick,500); render();
   try{ if(engine==='deepgram') await startDeepgram(); else if(engine==='local') await startLocal(); else if(engine==='hybrid'){ await startLocal(); startBrowser(); } else startBrowser(); }
   catch(e){ showErr(e.message||String(e)); stop(); }
