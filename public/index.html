@@ -174,7 +174,7 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
       </label>
       <label class="chip"><input type="checkbox" id="keepRec" checked> Keep a recording to review (stays on this device)</label>
     </div>
-    <p class="note" id="localNote" hidden>On-device model v8 (170k parameters, 24 Oct 2026, trained with background noise, room echo and phone-mic effects, and listening to pitch steadiness as well as the sound) that listens for um/uh/er. No audio leaves your phone. On a 3.1-hour real podcast test (928 ums) it caught about 81% / 71% / 48% of ums at roughly 63 / 26 / 9 false alerts per hour (sensitive / balanced / strict). With noise added (café chatter, street, music, a room, a pocket) it still caught 57–66% at 25 false alerts per hour or fewer.</p>
+    <p class="note" id="localNote" hidden>On-device model v9 (170k parameters, 25 Oct 2026, trained with background noise, room echo and phone-mic effects, listening to pitch steadiness as well as the sound, and hearing a quarter of a second past each moment before deciding) that listens for um/uh/er. No audio leaves your phone. On a 3.1-hour real podcast test (928 ums) it caught about 84% / 72% / 58% of ums at roughly 63 / 25 / 13 false alerts per hour (sensitive / balanced / strict). With noise added (café chatter, street, music, a room, a pocket) it still caught 57–66% at 25 false alerts per hour or fewer. The alert comes about 0.4 s after an um starts.</p>
     <p class="note" id="dgNote" hidden>Your key stays in this browser and goes only to Deepgram. Use a key you can revoke.</p>
     </div>
     </details>
