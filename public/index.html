@@ -287,11 +287,11 @@ const FILLERS = [
   {id:'er', label:'er / ah / hmm', on:true},
   {id:'like', label:'like', on:true},
   {id:'youknow', label:'you know', on:true},
-  {id:'imean', label:'I mean', on:false},
-  {id:'sortof', label:'sort of / kind of', on:false},
-  {id:'basically', label:'basically', on:false},
-  {id:'actually', label:'actually', on:false},
-  {id:'literally', label:'literally', on:false},
+  {id:'imean', label:'I mean', on:true},
+  {id:'sortof', label:'sort of / kind of', on:true},
+  {id:'basically', label:'basically', on:true},
+  {id:'actually', label:'actually', on:true},
+  {id:'literally', label:'literally', on:true},
 ];
 const LABEL = Object.fromEntries(FILLERS.map(f=>[f.id,f.label])); LABEL.snd='um / uh (sound)';
 const SOUND_IDS = new Set(['um','uh','er']);
