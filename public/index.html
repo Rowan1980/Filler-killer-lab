@@ -65,16 +65,16 @@ select,input[type=password],input[type=text]{font:500 16px var(--body);height:46
 .person{align-self:flex-start;display:flex;flex-direction:row;align-items:center;gap:8px;height:44px;padding:0 6px 0 6px;border-radius:22px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:500 14px var(--body)}
 .person .av{flex:none;width:32px;height:32px;border-radius:16px;background:var(--fg);color:var(--bg);display:grid;place-items:center;font-weight:700;font-size:14px}
 .person select{height:36px;border:0;background:transparent;padding:0 8px;font-weight:600}
-.person.wide{align-self:stretch;padding-right:4px}
-.person.wide select{margin-left:auto;font-size:15px;max-width:55%}
-.frow{display:flex;align-items:center;gap:10px}
-.fchips{flex:1 1 auto;min-width:0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
-.fchips::-webkit-scrollbar{display:none}
+.person.wide{padding:0 4px 0 6px}
+.person.wide select{font-size:15px;max-width:12em}
+.frow{display:flex;align-items:flex-start;gap:10px}
+.frow .link{flex:none;min-height:32px}
+.fchips{flex:1 1 auto;min-width:0;display:flex;flex-wrap:wrap;gap:6px}
 .fchip{flex:none;white-space:nowrap;padding:6px 12px;border-radius:16px;background:var(--peach);border:1px solid var(--peach-line);color:var(--accent-text);font:600 13px var(--body)}
-.alertrow{display:flex;align-items:center;gap:10px}
-.circ{position:relative;flex:none;width:48px;height:48px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.alertrow{display:flex;align-items:center;gap:8px}
+.circ{position:relative;flex:none;width:46px;height:46px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .circ input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
-.circ span{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);transition:background .15s,color .15s}
+.circ span{display:grid;place-items:center;width:46px;height:46px;border-radius:50%;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);transition:background .15s,color .15s}
 .circ svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}
 .circ input:checked+span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .circ input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
@@ -161,11 +161,21 @@ select,input[type=password],input[type=text]{font:500 16px var(--body);height:46
 .brk div:last-child{border-bottom:1px solid var(--rule)}
 .tally{display:none}
 /* lab tools */
-.who-pills{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.who-pills{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .who-pills button{height:44px;padding:0 6px;border-radius:22px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);font:600 14px var(--body);display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;min-width:0}
 .who-pills button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .who-pills button[aria-pressed=true]{background:var(--fg);border-color:var(--fg);color:var(--primary-ink)}
 .who-pills button.add{border-style:dashed;background:transparent}
+.who-pills .wp{position:relative;min-width:0;display:flex}
+.who-pills .wp>button[data-who]{flex:1;min-width:0;padding-right:36px}
+.who-pills .pen{position:absolute;right:4px;top:4px;width:36px;height:36px;padding:0;border:0;border-radius:18px;background:transparent;color:inherit;display:grid;place-items:center;cursor:pointer}
+.who-pills .wp>button[aria-pressed=true]+.pen{color:var(--primary-ink)}
+.who-pills .pen svg{width:16px;height:16px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
+.whoedit{gap:10px}
+.whoedit input#whoName2{width:100%;height:46px;padding:0 14px;border-radius:14px;border:1.5px solid var(--line);background:var(--bg);color:var(--fg);font:500 16px var(--body)}
+.whoedit .btn{min-height:48px;height:48px}
+.link.danger{color:#A33A2A}
+.btn.danger{background:#A33A2A;border-color:#A33A2A;color:#fff}
 .navrow{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:56px;border-top:1px solid var(--rule);background:none;border-left:0;border-right:0;border-bottom:0;width:100%;text-align:left;color:var(--fg);font:500 15px var(--body);cursor:pointer;padding:0}
 .navrow small{display:block;font-size:12.5px;color:var(--muted);font-weight:400}
 .navlist{display:flex;flex-direction:column}
@@ -280,6 +290,7 @@ th{font:600 12px var(--body);color:var(--muted)}
   <div class="alertrow" id="promptChips">
     <label class="circ" title="Vibration"><input type="checkbox" id="aVibe" checked aria-label="Vibration"><span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="4" width="8" height="16" rx="2"/><path d="M4.5 9v6M19.5 9v6"/></svg></span></label>
     <label class="circ" title="Sound"><input type="checkbox" id="aBeep" aria-label="Sound"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10z"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/></svg></span></label>
+    <label class="circ" title="Flash the screen"><input type="checkbox" id="aFlash" aria-label="Flash the screen"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M13 3L5 13.5h6L10 21l8-10.5h-6z"/></svg></span></label>
     <label class="switch on" id="calLiveRow"><span>Show ums for fine tuning <small id="calLiveState" hidden>· On</small></span>
       <input type="checkbox" id="calLive" role="switch" checked></label>
   </div>
@@ -330,7 +341,7 @@ th{font:600 12px var(--body);color:var(--muted)}
 
 <!-- 3 · Session summary -->
 <main class="screen" id="vSummary" hidden>
-  <div><h1>Finding your flow</h1><p class="lead">Small steps towards more confident speaking. <span class="note" id="sumWho"></span></p></div>
+  <div><h1>Finding your flow</h1><p class="lead">Small steps towards more confident speaking.</p></div>
   <div class="card" style="gap:4px"><span class="big" id="sumBig">No session yet</span><span class="note" style="font-size:14px" id="sumRate">Finish a practice to see your summary here.</span></div>
   <section class="stack" id="chartWrap" hidden>
     <div class="bar" style="min-height:0"><h3>Fillers per minute · last 7 days</h3><span class="note" id="chartN"></span></div>
@@ -399,7 +410,17 @@ th{font:600 12px var(--body);color:var(--muted)}
 
   <section class="stack"><h3>Who's practising</h3>
     <div class="who-pills" id="whoPills"></div>
-    <button class="link" id="whoDel" style="align-self:flex-start">Remove this person</button>
+    <div class="card whoedit" id="whoEdit" hidden>
+      <label>Name<input id="whoName2" maxlength="30" autocomplete="off"></label>
+      <div class="row" style="gap:8px"><button class="btn" id="whoSave" style="flex:1">Save</button><button class="btn secondary" id="whoCancel" style="flex:1">Cancel</button></div>
+      <button class="link danger" id="whoDel" style="align-self:flex-start">Delete this person</button>
+      <div class="stack" id="whoDelBox" hidden>
+        <p style="margin:0" id="whoDelMsg"></p>
+        <label class="chip"><input type="checkbox" id="whoKeep" checked> Keep their ums to help improve the detector</label>
+        <p class="note" style="margin:0">Kept ums stay hidden on this phone and aren't shown for anyone.</p>
+        <div class="row" style="gap:8px"><button class="btn danger" id="whoDelGo" style="flex:1">Delete</button><button class="btn secondary" id="whoDelNo" style="flex:1">Keep them</button></div>
+      </div>
+    </div>
     <button id="whoAdd" hidden></button>
   </section>
 
@@ -433,7 +454,6 @@ th{font:600 12px var(--body);color:var(--muted)}
       <select id="sens" hidden><option value="sensitive">sensitive</option><option value="balanced" selected>balanced</option><option value="strict">strict</option></select>
       <label class="chip"><input type="checkbox" id="keepRec" checked> Keep a recording of each session to review (stays on this phone)</label>
     </div>
-    <label class="chip"><input type="checkbox" id="aFlash"> Also flash the screen (off by default)</label>
     <p class="note" id="localNote">On-device model v9: catches about 84% / 72% / 58% of ums at roughly 63 / 25 / 13 false buzzes per hour (catch more / balanced / fewer buzzes) on a 3.1-hour real podcast test, and 57–66% with background noise. The buzz comes about 0.4 s after an um starts.</p>
   </section>
 
@@ -1010,15 +1030,43 @@ function saveProfs(p){ try{ localStorage.setItem('fk_profiles',JSON.stringify(p)
 const who=()=>profs().current, calKey=()=>'fk_cal:'+who();
 try{ const old=localStorage.getItem('fk_cal'); if(old!==null){ const k='fk_cal:'+profs().list[0]; if(localStorage.getItem(k)===null) localStorage.setItem(k,old); localStorage.removeItem('fk_cal'); } }catch(e){}
 function renderWho(){ const p=profs(), s=$('#who');
-  s.replaceChildren(...p.list.map(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=n; return o; })); s.value=p.current; $('#whoDel').disabled=p.list.length<2;
-  $('#whoAv').textContent=(p.current[0]||'?').toUpperCase(); $('#liveWho').textContent=p.current; $('#sumWho').textContent=$('#calWho').textContent='· '+p.current;
-  const pills=p.list.map(n=>{ const b=document.createElement('button'); b.setAttribute('aria-pressed',n===p.current); b.dataset.who=n;
+  s.replaceChildren(...p.list.map(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=n; return o; })); s.value=p.current;
+  $('#whoAv').textContent=(p.current[0]||'?').toUpperCase(); $('#liveWho').textContent=p.current; $('#calWho').textContent='· '+p.current;
+  const pills=p.list.map(n=>{ const w=document.createElement('div'); w.className='wp';
+      const b=document.createElement('button'); b.setAttribute('aria-pressed',n===p.current); b.dataset.who=n;
       const av=document.createElement('span'); av.textContent=(n[0]||'?').toUpperCase(); av.style.cssText='flex:none;width:26px;height:26px;border-radius:13px;display:grid;place-items:center;font-size:12px;background:'+(n===p.current?'var(--bg);color:var(--fg)':'var(--sage);color:#173D32');
-      const nm=document.createElement('span'); nm.textContent=n+(n===p.current?' ✓':''); b.append(av,nm); return b; });
+      const nm=document.createElement('span'); nm.textContent=n; b.append(av,nm);
+      const pen=document.createElement('button'); pen.className='pen'; pen.dataset.edit=n; pen.setAttribute('aria-label','Rename or delete '+n);
+      pen.innerHTML='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 7l3 3"/></svg>'; w.append(b,pen); return w; });
   const add=document.createElement('button'); add.className='add'; add.textContent='+ Add'; add.setAttribute('aria-label','Add a person'); add.dataset.add='1';
   $('#whoPills').replaceChildren(...pills,add); }
+// rename or delete a person (pen on their pill)
+let whoEditing=null;
+function closeWhoEdit(){ whoEditing=null; $('#whoEdit').hidden=true; $('#whoDelBox').hidden=true; }
+function openWhoEdit(n){ if(running) return showErr('End practice before changing people.');
+  whoEditing=n; $('#whoName2').value=n; $('#whoEdit').hidden=false; $('#whoDelBox').hidden=true;
+  const solo=profs().list.length<2; $('#whoDel').disabled=solo; $('#whoDel').textContent=solo?'Add another person before deleting':'Delete this person'; $('#whoName2').focus(); }
+$('#whoCancel').addEventListener('click',closeWhoEdit);
+$('#whoSave').addEventListener('click',async()=>{ const old=whoEditing, n=$('#whoName2').value.trim().slice(0,30); if(!old) return;
+  if(!n||n===old) return closeWhoEdit(); const p=profs(); if(p.list.includes(n)) return alert(`There is already someone called ${n}.`);
+  p.list=p.list.map(x=>x===old?n:x); if(p.current===old) p.current=n; saveProfs(p);
+  try{ for(const k of ['fk_cal:','fk_hist:']){ const v=localStorage.getItem(k+old); if(v!==null){ localStorage.setItem(k+n,v); localStorage.removeItem(k+old); } } }catch(e){}
+  const all=await tx('meta','readonly',s=>s.getAll()).catch(()=>[])||[];
+  for(const m of all.filter(m=>m.profile===old)){ m.profile=n; await dbPutMeta(m).catch(()=>{}); }
+  closeWhoEdit(); switchWho(); });
+$('#whoDel').addEventListener('click',()=>{ const n=whoEditing; if(!n) return;
+  $('#whoDelMsg').textContent=`Delete ${n}? This removes their sessions, progress history and tuning from this phone. It can't be undone.`; $('#whoDelBox').hidden=false; });
+$('#whoDelNo').addEventListener('click',()=>{ $('#whoDelBox').hidden=true; });
+$('#whoDelGo').addEventListener('click',async()=>{ const n=whoEditing, p=profs(); if(!n||p.list.length<2) return; const keep=$('#whoKeep').checked;
+  const all=await tx('meta','readonly',s=>s.getAll()).catch(()=>[])||[];
+  for(const m of all.filter(m=>m.profile===n)){
+    if(keep){ m.profile='#kept:'+n; await dbPutMeta(m).catch(()=>{}); }   // hidden from every person, still on the phone for improving the detector
+    else { await tx('meta','readwrite',s=>s.delete(m.id)).catch(()=>{}); await tx('audio','readwrite',s=>s.delete(m.id)).catch(()=>{}); } }
+  try{ localStorage.removeItem('fk_cal:'+n); localStorage.removeItem('fk_hist:'+n); }catch(e){}
+  p.list=p.list.filter(x=>x!==n); if(p.current===n) p.current=p.list[0]; saveProfs(p); closeWhoEdit(); switchWho(); });
 $('#whoPills').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return;
   if(b.dataset.add) return $('#whoAdd').click();
+  if(b.dataset.edit) return openWhoEdit(b.dataset.edit);
   const p=profs(); if(running) return showErr('End practice before changing who is talking.'); p.current=b.dataset.who; saveProfs(p); switchWho(); });
 function switchWho(){ cur=null; renderWho(); refreshSessions(); }
 $('#who').addEventListener('change',e=>{ const p=profs();
@@ -1027,12 +1075,6 @@ $('#who').addEventListener('change',e=>{ const p=profs();
 $('#whoAdd').addEventListener('click',()=>{ if(running) return showErr('Stop listening before changing who is talking.');
   const n=(prompt('Name of the person to add:')||'').trim().slice(0,30); if(!n) return;
   const p=profs(); if(!p.list.includes(n)) p.list.push(n); p.current=n; saveProfs(p); switchWho(); });
-$('#whoDel').addEventListener('click',async()=>{ const p=profs(), n=p.current;
-  if(p.list.length<2||!confirm(`Remove ${n} from this device, with their recordings and calibration?`)) return;
-  const all=await tx('meta','readonly',s=>s.getAll()).catch(()=>[])||[];
-  for(const m of all.filter(m=>m.profile===n)){ await tx('meta','readwrite',s=>s.delete(m.id)).catch(()=>{}); await tx('audio','readwrite',s=>s.delete(m.id)).catch(()=>{}); }
-  try{ localStorage.removeItem('fk_cal:'+n); }catch(e){}
-  p.list=p.list.filter(x=>x!==n); p.current=p.list[0]; saveProfs(p); switchWho(); });
 renderWho();
 
 // um library: every um in this person's recordings (alerts not marked "not", plus missed ums), with play / trim / include.
