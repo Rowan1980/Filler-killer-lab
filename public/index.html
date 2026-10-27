@@ -22,9 +22,29 @@
 *{box-sizing:border-box}
 [hidden]{display:none!important} /* .panel/.row set display, which would otherwise override the hidden attribute */
 html,body{margin:0}
-body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--body);
-  padding:max(16px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(16px,env(safe-area-inset-left))}
-.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:16px}
+body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--body);padding:0 0 max(24px,env(safe-area-inset-bottom))}
+.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:16px;
+  padding:16px max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left));box-sizing:content-box}
+@media (max-width:792px){.wrap{max-width:none}}
+/* top strip: title, settings, start button; stays put while the page scrolls */
+.topbar{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 90%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
+  border-bottom:1px solid var(--line);padding:max(10px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 10px max(16px,env(safe-area-inset-left))}
+.topin{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:8px;position:relative}
+.toprow{display:flex;align-items:center;justify-content:space-between;gap:12px}
+.topbar h1{font-size:clamp(22px,6vw,30px)}
+.gear{flex:none;width:44px;height:44px;display:grid;place-items:center;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer;touch-action:manipulation}
+.gear[aria-expanded=true]{border-color:var(--accent);color:var(--accent)}
+.gear:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.setpop{position:absolute;right:0;top:52px;width:min(460px,100%);max-height:min(72vh,640px);overflow:auto;z-index:30;box-shadow:0 14px 36px rgba(0,0,0,.2)}
+/* collapsible panel sections (review, log) */
+.sect>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;min-height:44px;border-radius:8px}
+.sect>summary::-webkit-details-marker{display:none}
+.sect>summary h2{flex:1 1 auto;min-width:0}
+.sect>summary::after{content:'';flex:none;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-3px) rotate(45deg);transition:transform .2s}
+.sect[open]>summary::after{transform:translateY(2px) rotate(-135deg)}
+.sect>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
+.sectbody{display:flex;flex-direction:column;gap:12px;padding-top:12px}
+.wrap>section,.wrap>button{scroll-margin-top:150px} /* keep scrolled-to sections clear of the top strip */
 h1{font:800 clamp(28px,7vw,44px)/1 var(--display);letter-spacing:-.02em;margin:0;text-wrap:balance}
 h1 span{color:var(--accent)}
 h2{font:800 18px/1.2 var(--display);margin:0}
@@ -68,7 +88,7 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
 #flash{position:fixed;inset:0;background:var(--accent);opacity:0;pointer-events:none;transition:opacity .25s}
 #flash.on{opacity:.35;transition:none}
 /* big start/stop button at the top */
-.start{font:800 clamp(22px,6.5vw,30px)/1 var(--display);letter-spacing:.08em;text-transform:uppercase;width:100%;min-height:84px;border-radius:18px;
+.start{font:800 clamp(19px,5.5vw,26px)/1 var(--display);letter-spacing:.08em;text-transform:uppercase;width:100%;min-height:60px;border-radius:16px;
   box-shadow:0 8px 22px color-mix(in srgb,var(--accent) 35%,transparent);transition:transform .08s,box-shadow .2s,background .2s;touch-action:manipulation}
 .start:active{transform:scale(.985)}
 .start.live{background:var(--fg);color:var(--bg);animation:pulse 1.6s ease-in-out infinite}
@@ -100,7 +120,7 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
 /* review & calibrate */
 :root{--miss:#2f6fd6}
 @media (prefers-color-scheme:dark){:root{--miss:#6aa1ff}}
-#tl{width:100%;height:96px;display:block;border-radius:10px;background:var(--bg);border:1px solid var(--line);cursor:pointer;touch-action:manipulation}
+#tl{width:100%;height:132px;display:block;border-radius:10px;background:var(--bg);border:1px solid var(--line);cursor:crosshair;touch-action:none}
 .alist{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto}
 .arow{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:12px}
 .arow .t{font:600 14px var(--mono);font-variant-numeric:tabular-nums;min-width:48px}
@@ -126,27 +146,19 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
 </head>
 <body>
 <div id="flash"></div>
-<div class="wrap">
-  <button class="btn start" id="startBtn">Start listening</button>
-  <p class="err" id="err" hidden></p>
-
-  <header>
-    <h1>Filler <span>Killer</span> Lab</h1>
-    <p class="sub">Prototype bench test: live filler alerts, detection latency and accuracy against a known script.</p>
-  </header>
-
-  <section class="panel" aria-label="Setup">
-    <div class="row" style="flex-wrap:nowrap;gap:8px">
-      <label style="flex:1 1 auto">Who's talking
-        <select id="who"></select>
-      </label>
-      <button class="btn secondary" id="whoAdd" aria-label="Add a person" style="flex:none">+ Add</button>
-      <button class="btn secondary" id="whoDel" aria-label="Remove this person" style="flex:none">Remove</button>
+<header class="topbar">
+  <div class="topin">
+    <div class="toprow">
+      <h1>Filler <span>Killer</span> Lab</h1>
+      <button class="gear" id="setBtn" aria-label="Settings" aria-expanded="false" aria-controls="setPanel">
+        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.6 7.6 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.6 7.6 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.6 7.6 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
+      </button>
     </div>
-    <button class="btn secondary" id="libBtn">Um library</button>
-    <details class="fold" id="engineFold">
-    <summary><span class="status">Speech engine</span><span class="sumval" id="engineSum"></span></summary>
-    <div class="foldbody">
+    <button class="btn start" id="startBtn">Start listening</button>
+    <p class="err" id="err" hidden></p>
+    <section class="panel setpop" id="setPanel" hidden aria-label="Settings">
+    <div class="row" style="justify-content:space-between;align-items:center"><h2>Settings</h2><button class="btn secondary" id="setClose">Done</button></div>
+    <p class="note">Prototype bench test: live filler alerts, detection latency and accuracy against a known script. Current engine: <b id="engineSum"></b>.</p>
     <div class="row">
       <label style="flex:1 1 220px">Speech engine
         <select id="engine">
@@ -176,20 +188,34 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
     </div>
     <p class="note" id="localNote" hidden>On-device model v9 (170k parameters, 25 Oct 2026, trained with background noise, room echo and phone-mic effects, listening to pitch steadiness as well as the sound, and hearing a quarter of a second past each moment before deciding) that listens for um/uh/er. No audio leaves your phone. On a 3.1-hour real podcast test (928 ums) it caught about 84% / 72% / 58% of ums at roughly 63 / 25 / 13 false alerts per hour (sensitive / balanced / strict). With noise added (café chatter, street, music, a room, a pocket) it still caught 57–66% at 25 false alerts per hour or fewer. The alert comes about 0.4 s after an um starts.</p>
     <p class="note" id="dgNote" hidden>Your key stays in this browser and goes only to Deepgram. Use a key you can revoke.</p>
+    </section>
+  </div>
+</header>
+
+<div class="wrap">
+  <section class="panel" aria-label="Who's talking">
+    <div class="row" style="flex-wrap:nowrap;gap:8px">
+      <label style="flex:1 1 auto">Who's talking
+        <select id="who"></select>
+      </label>
+      <button class="btn secondary" id="whoAdd" aria-label="Add a person" style="flex:none">+ Add</button>
+      <button class="btn secondary" id="whoDel" aria-label="Remove this person" style="flex:none">Remove</button>
     </div>
-    </details>
+  </section>
+
+  <section class="panel" aria-label="Fillers and prompts">
     <details class="fold" id="fillerFold">
       <summary><span class="status">Fillers to count</span><span class="sumval" id="fillerSum"></span></summary>
       <div class="foldbody"><div class="pills" id="fillerChips"></div></div>
     </details>
-    <div>
-      <div class="status" style="margin-bottom:6px">Prompt on each filler</div>
-      <div class="chips">
-        <label class="chip"><input type="checkbox" id="aBeep" checked> Beep</label>
-        <label class="chip"><input type="checkbox" id="aFlash" checked> Screen flash</label>
-        <label class="chip"><input type="checkbox" id="aVibe" checked> Vibrate (Android)</label>
-      </div>
-    </div>
+    <details class="fold" id="promptFold">
+      <summary><span class="status">Prompt on each filler</span><span class="sumval" id="promptSum"></span></summary>
+      <div class="foldbody"><div class="pills" id="promptChips">
+        <label class="pill"><input type="checkbox" id="aBeep" checked><span>Beep</span></label>
+        <label class="pill"><input type="checkbox" id="aFlash" checked><span>Screen flash</span></label>
+        <label class="pill"><input type="checkbox" id="aVibe" checked><span>Vibrate (Android)</span></label>
+      </div></div>
+    </details>
   </section>
 
   <div class="tabs" role="tablist">
@@ -209,13 +235,26 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
   </section>
 
   <section class="panel" id="reviewPanel" hidden>
-    <div class="row" style="justify-content:space-between;align-items:center">
-      <h2>Review &amp; calibrate · <span id="whoName"></span></h2>
-      <select id="sessSel" aria-label="Recording" style="flex:1 1 200px;max-width:320px"></select>
+    <details class="sect" id="reviewFold">
+    <summary><h2>Review &amp; calibrate · <span id="whoName"></span></h2></summary>
+    <div class="sectbody">
+    <div class="row">
+      <label style="flex:1 1 200px">Recording
+        <select id="sessSel"></select>
+      </label>
+      <label style="flex:1 1 200px">Name / tag
+        <input type="text" id="sessName" maxlength="40" placeholder="e.g. Dinner, Work call" autocomplete="off">
+      </label>
     </div>
-    <p class="note">Play the recording back. Mark each alert as a real um or not, and tap <b>+ Missed um</b> where it missed one. Recordings stay in this browser.</p>
-    <canvas id="tl" aria-label="Timeline: tap to jump there"></canvas>
-    <p class="note">Line: um likelihood · dashed: alert threshold · <span class="good">●</span> real · <span class="bad">✕</span> not an um · ○ unmarked · <span style="color:var(--miss)">▲</span> missed</p>
+    <p class="note">Play the recording back. Mark each alert as a real um or not, and add any um it missed. Pinch or scroll on the waveform to zoom, drag to move along, tap to jump there.</p>
+    <canvas id="tl" aria-label="Waveform and um likelihood: pinch or scroll to zoom, drag to pan, tap to jump"></canvas>
+    <div class="row" style="align-items:center;gap:8px">
+      <button class="ibtn" id="zoomOut" aria-label="Zoom out">−</button>
+      <button class="ibtn" id="zoomIn" aria-label="Zoom in">+</button>
+      <button class="ibtn" id="zoomFit">Whole recording</button>
+      <span class="note" id="zoomInfo"></span>
+    </div>
+    <p class="note">Grey: sound · line: um likelihood · dashed: alert threshold · <span class="good">●</span> real · <span class="bad">✕</span> not an um · ○ unmarked · <span style="color:var(--miss)">▲</span> missed</p>
     <audio id="player" controls preload="auto" style="width:100%"></audio>
     <div class="row" style="align-items:center">
       <button class="btn secondary" id="missBtn">+ Missed um here</button>
@@ -234,7 +273,11 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
       <div class="scroll"><table id="calTable" hidden><thead><tr><th>Setting</th><th>Standard</th><th>Yours</th></tr></thead><tbody></tbody></table></div>
       <label class="chip" style="align-self:flex-start"><input type="checkbox" id="useCal" disabled> Use my calibration</label>
     </div>
+    </div>
+    </details>
   </section>
+
+  <button class="btn secondary" id="libBtn">Um library</button>
 
   <section class="panel" id="libPanel" hidden>
     <div class="row" style="justify-content:space-between;align-items:center">
@@ -270,12 +313,14 @@ th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-
   </section>
 
   <section class="panel">
-    <div class="row" style="justify-content:space-between;align-items:center">
-      <h2>Event log</h2>
-      <button class="btn secondary" id="copyBtn">Copy results</button>
-    </div>
+    <details class="sect" id="logFold">
+    <summary><h2>Event log</h2></summary>
+    <div class="sectbody">
+    <button class="btn secondary" id="copyBtn" style="align-self:flex-start">Copy results</button>
     <div class="scroll"><table id="log"><thead><tr><th>Time</th><th>Filler</th><th>Engine</th><th>Latency</th></tr></thead><tbody><tr><td colspan="4" class="note">No fillers yet.</td></tr></tbody></table></div>
     <textarea id="copyFallback" hidden rows="6" style="width:100%;font:13px var(--mono)"></textarea>
+    </div>
+    </details>
   </section>
 </div>
 
@@ -352,6 +397,16 @@ $('#script').textContent = SCRIPT;
 try{const k=localStorage.getItem('fk_dg');if(k)$('#dgKey').value=k;}catch(e){}
 function syncEngine(){engine=$('#engine').value;$('#engineSum').textContent=$('#engine').selectedOptions[0].textContent;const dg=engine==='deepgram';$('#dgRow').hidden=!dg;$('#dgNote').hidden=!dg;$('#langWrap').hidden=dg||engine==='local';$('#localNote').hidden=!(engine==='local'||engine==='hybrid');$('#sensRow').hidden=$('#localNote').hidden;}
 $('#engine').addEventListener('change',syncEngine); syncEngine();
+
+// settings popover (top right)
+function setOpen(on){ $('#setPanel').hidden=!on; $('#setBtn').setAttribute('aria-expanded',on); }
+$('#setBtn').addEventListener('click',()=>setOpen($('#setPanel').hidden));
+$('#setClose').addEventListener('click',()=>setOpen(false));
+addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('#setPanel').hidden){ setOpen(false); $('#setBtn').focus(); } });
+document.addEventListener('pointerdown',e=>{ if(!$('#setPanel').hidden&&!e.target.closest('#setPanel,#setBtn')) setOpen(false); });
+// prompt summary
+function syncPromptSum(){ const on=[['#aBeep','Beep'],['#aFlash','Flash'],['#aVibe','Vibrate']].filter(([s])=>$(s).checked).map(([,n])=>n); $('#promptSum').textContent=on.length?on.join(' · '):'None'; }
+$('#promptChips').addEventListener('change',syncPromptSum); syncPromptSum();
 
 // tabs
 const NOTES={
@@ -644,14 +699,15 @@ async function finishSession(){
               dur:s.probs.length/100, alerts:s.alerts, missed:[], done:false};
   try{ await dbPutMeta(meta); await tx('audio','readwrite',st=>st.put(a,s.id)); }
   catch(e){ showErr('Could not keep the recording for review (browser storage is full or blocked).'); return; }
-  await refreshSessions(s.id);
+  await refreshSessions(s.id); $('#reviewFold').open=true;
 }
+const sessLabel=m=>`${m.name?m.name+' · ':''}${new Date(m.date).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} · ${fmtT(m.dur)} · ${m.alerts.length} alerts${m.done?' · ✓ marked':''}`;
 async function refreshSessions(selectId){
   const all=await tx('meta','readonly',s=>s.getAll()).catch(()=>[])||[], first=profs().list[0];
   for(const m of all) if(!m.profile){ m.profile=first; dbPutMeta(m).catch(()=>{}); }   // recordings made before profiles existed
   metas=all.filter(m=>m.profile===who()).sort((a,b)=>b.id-a.id); $('#whoName').textContent=who(); updateLibBtn(); libSoon();
   $('#reviewPanel').hidden=!metas.length; if(!metas.length){ cur=null; return; }
-  $('#sessSel').innerHTML=metas.map(m=>`<option value="${m.id}">${new Date(m.date).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} · ${fmtT(m.dur)} · ${m.alerts.length} alerts${m.done?' · ✓ marked':''}</option>`).join('');
+  $('#sessSel').replaceChildren(...metas.map(m=>{ const o=document.createElement('option'); o.value=m.id; o.textContent=sessLabel(m); return o; }));
   const id=selectId ?? (cur&&metas.some(m=>m.id===cur.id)?cur.id:metas[0].id);
   $('#sessSel').value=String(id); await openSession(id); calRefresh();
 }
@@ -660,7 +716,9 @@ async function openSession(id){
   const a=await dbGetAudio(cur.id).catch(()=>null);
   if(curUrl) URL.revokeObjectURL(curUrl); curUrl=a?URL.createObjectURL(wavBlob(a)):null;
   if(curUrl) $('#player').src=curUrl; else $('#player').removeAttribute('src');
-  $('#revDone').checked=!!cur.done; renderReview();
+  curPcm=a||null; curPeaks=null; peakMax=1;
+  if(a){ curPeaks=new Float32Array(Math.ceil(a.length/160)); for(let k=0;k<curPeaks.length;k++){ let mx=0; for(let i=k*160;i<Math.min(a.length,k*160+160);i++){ const v=a[i]<0?-a[i]:a[i]; if(v>mx) mx=v; } curPeaks[k]=mx; if(mx>peakMax) peakMax=mx; } }
+  tv=null; $('#sessName').value=cur.name||''; $('#revDone').checked=!!cur.done; renderReview(); setView(0,cur.dur);
 }
 function saveCur(){ if(cur) dbPutMeta(cur).catch(()=>showErr('Could not save your marks.')); }
 function renderReview(){
@@ -676,23 +734,59 @@ function renderReview(){
   drawTl(); updateLibBtn(); libSoon();
 }
 const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).trim();
+// zoomable review view: tv = [start, end] seconds on screen; curPeaks = max |sample| per 10 ms block of the recording
+let tv=null, curPcm=null, curPeaks=null, peakMax=1;
+function setView(a,b){
+  if(!cur) return; const d=cur.dur, span=Math.max(Math.min(d,1),Math.min(d,b-a)); a=Math.max(0,Math.min(a,d-span)); tv=[a,a+span];
+  $('#zoomInfo').textContent=span>=d-0.01?'Whole recording':`${fmtT2(a)} – ${fmtT2(a+span)} (${span<10?span.toFixed(1):Math.round(span)} s)`; drawTl();
+}
+function zoomAt(t,f){ const [a,b]=tv; setView(t-(t-a)*f, t-(t-a)*f+(b-a)*f); }
 function drawTl(){
-  const c=$('#tl'); if(!cur||!c.clientWidth) return; const dpr=devicePixelRatio||1, W=c.clientWidth, H=c.clientHeight;
+  const c=$('#tl'); if(!cur||!c.clientWidth) return; if(!tv) tv=[0,cur.dur]; const dpr=devicePixelRatio||1, W=c.clientWidth, H=c.clientHeight;
   if(c.width!==Math.round(W*dpr)||c.height!==Math.round(H*dpr)){ c.width=Math.round(W*dpr); c.height=Math.round(H*dpr); }
   const g=c.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
-  const P=cur.probs, top=16, bot=H-16, y=v=>bot-(bot-top)*v, x=t=>t/cur.dur*W;
-  g.strokeStyle=cssv('--muted'); g.lineWidth=1.2; g.beginPath();
-  for(let px=0;px<W;px++){ const i0=Math.floor(px/W*P.length), i1=Math.max(i0+1,Math.floor((px+1)/W*P.length)); let mx=0;
-    for(let i=i0;i<i1&&i<P.length;i++) mx=Math.max(mx,P[i]); px?g.lineTo(px,y(mx)):g.moveTo(px,y(mx)); }
+  const [a,b]=tv, sp=b-a, x=t=>(t-a)/sp*W, tAt=px=>a+px/W*sp, P=cur.probs, top=18, bot=H-18, y=v=>bot-(bot-top)*v, mid=(top+bot)/2;
+  if(curPcm){ g.fillStyle=cssv('--muted'); g.globalAlpha=0.32;                         // sound
+    for(let px=0;px<W;px++){ const t0=tAt(px), t1=tAt(px+1); let mx=0;
+      if((t1-t0)*100>=1){ for(let k=Math.floor(t0*100);k<Math.ceil(t1*100)&&k<curPeaks.length;k++) if(curPeaks[k]>mx) mx=curPeaks[k]; }
+      else for(let i=Math.floor(t0*16000);i<Math.ceil(t1*16000)&&i<curPcm.length;i++){ const v=Math.abs(curPcm[i]); if(v>mx) mx=v; }
+      const h=Math.max(0.5,mx/peakMax*(bot-top)/2); g.fillRect(px,mid-h,1,2*h); }
+    g.globalAlpha=1; }
+  g.strokeStyle=cssv('--fg'); g.lineWidth=1.3; g.beginPath();                          // um likelihood
+  for(let px=0;px<W;px++){ const i0=Math.floor(tAt(px)*100), i1=Math.max(i0+1,Math.floor(tAt(px+1)*100)); let mx=0;
+    for(let i=Math.max(0,i0);i<i1&&i<P.length;i++) if(P[i]>mx) mx=P[i]; px?g.lineTo(px,y(mx)):g.moveTo(px,y(mx)); }
   g.stroke();
   g.setLineDash([4,4]); g.strokeStyle=cssv('--accent'); g.beginPath(); g.moveTo(0,y(cur.cfg[0])); g.lineTo(W,y(cur.cfg[0])); g.stroke(); g.setLineDash([]);
   g.font='bold 12px system-ui'; g.textAlign='center';
-  for(const a of cur.alerts){ const X=x(a.t);
-    if(a.label==='real'){ g.fillStyle=cssv('--ok'); g.beginPath(); g.arc(X,8,5,0,7); g.fill(); }
-    else if(a.label==='not'){ g.fillStyle=cssv('--accent'); g.fillText('✕',X,12); }
-    else { g.strokeStyle=cssv('--fg'); g.lineWidth=1.5; g.beginPath(); g.arc(X,8,4.5,0,7); g.stroke(); } }
-  g.fillStyle=cssv('--miss'); for(const t of cur.missed){ const X=x(t); g.beginPath(); g.moveTo(X,H-13); g.lineTo(X-5,H-3); g.lineTo(X+5,H-3); g.fill(); }
-  const p=$('#player'); if(p.getAttribute('src')){ const X=x(p.currentTime||0); g.strokeStyle=cssv('--fg'); g.lineWidth=1.5; g.beginPath(); g.moveTo(X,0); g.lineTo(X,H); g.stroke(); }
+  for(const al of cur.alerts){ if(al.t<a||al.t>b) continue; const X=x(al.t);
+    if(al.label==='real'){ g.fillStyle=cssv('--ok'); g.beginPath(); g.arc(X,9,5,0,7); g.fill(); }
+    else if(al.label==='not'){ g.fillStyle=cssv('--accent'); g.fillText('✕',X,13); }
+    else { g.strokeStyle=cssv('--fg'); g.lineWidth=1.5; g.beginPath(); g.arc(X,9,4.5,0,7); g.stroke(); } }
+  g.fillStyle=cssv('--miss'); for(const t of cur.missed){ if(t<a||t>b) continue; const X=x(t); g.beginPath(); g.moveTo(X,H-14); g.lineTo(X-6,H-3); g.lineTo(X+6,H-3); g.fill(); }
+  const p=$('#player'); if(p.getAttribute('src')){ const X=x(p.currentTime||0); g.strokeStyle=cssv('--accent'); g.lineWidth=2; g.beginPath(); g.moveTo(X,0); g.lineTo(X,H); g.stroke(); }
+}
+{ // gestures on the review view: pinch (or ctrl/trackpad-pinch wheel) zooms, drag pans, tap jumps there
+  const c=$('#tl'), ptrs=new Map(); let gest=null;
+  const tOf=cx=>{ const r=c.getBoundingClientRect(); return tv[0]+(cx-r.left)/r.width*(tv[1]-tv[0]); };
+  c.addEventListener('pointerdown',e=>{ if(!cur||!tv) return; try{ c.setPointerCapture(e.pointerId); }catch(err){} ptrs.set(e.pointerId,e.clientX);
+    if(ptrs.size===1) gest={kind:'pan',x0:e.clientX,tv0:tv.slice(),moved:false};
+    else if(ptrs.size===2){ const xs=[...ptrs.values()]; gest={kind:'pinch',d0:Math.max(8,Math.abs(xs[0]-xs[1])),mid0:(xs[0]+xs[1])/2,tv0:tv.slice()}; } });
+  c.addEventListener('pointermove',e=>{ if(!gest||!ptrs.has(e.pointerId)) return; ptrs.set(e.pointerId,e.clientX); const r=c.getBoundingClientRect(), [a0,b0]=gest.tv0, sp0=b0-a0;
+    if(gest.kind==='pinch'&&ptrs.size>=2){ const xs=[...ptrs.values()], d=Math.max(8,Math.abs(xs[0]-xs[1])), span=sp0*gest.d0/d;
+      const anchor=a0+(gest.mid0-r.left)/r.width*sp0, a=anchor-((xs[0]+xs[1])/2-r.left)/r.width*span; setView(a,a+span); }
+    else if(gest.kind==='pan'){ const dx=e.clientX-gest.x0; if(Math.abs(dx)>6) gest.moved=true; if(gest.moved){ const a=a0-dx/r.width*sp0; setView(a,a+sp0); } } });
+  const end=e=>{ if(!ptrs.has(e.pointerId)) return; const g=gest; ptrs.delete(e.pointerId);
+    if(g&&g.kind==='pan'&&!g.moved&&e.type==='pointerup'){ const p=$('#player'), t=Math.max(0,Math.min(tOf(e.clientX),cur.dur-0.01));
+      if(p.getAttribute('src')) p.currentTime=Math.min(t,(p.duration||cur.dur)-0.01); drawTl(); }
+    gest=ptrs.size===1?{kind:'pan',x0:[...ptrs.values()][0],tv0:tv.slice(),moved:true}:ptrs.size?gest:null; };
+  c.addEventListener('pointerup',end); c.addEventListener('pointercancel',end);
+  c.addEventListener('wheel',e=>{ if(!cur||!tv) return;
+    if(e.ctrlKey||e.metaKey){ e.preventDefault(); zoomAt(tOf(e.clientX),Math.exp(e.deltaY*0.01)); }
+    else if(Math.abs(e.deltaX)>Math.abs(e.deltaY)){ e.preventDefault(); const sp=tv[1]-tv[0], r=c.getBoundingClientRect(); setView(tv[0]+e.deltaX/r.width*sp,tv[1]+e.deltaX/r.width*sp); } },{passive:false});
+  const focusT=()=>{ const p=$('#player'), t=p.currentTime||0; return t>=tv[0]&&t<=tv[1]?t:(tv[0]+tv[1])/2; };
+  $('#zoomIn').addEventListener('click',()=>{ if(cur&&tv) zoomAt(focusT(),0.5); });
+  $('#zoomOut').addEventListener('click',()=>{ if(cur&&tv) zoomAt(focusT(),2); });
+  $('#zoomFit').addEventListener('click',()=>{ if(cur) setView(0,cur.dur); });
 }
 function playAround(t){ const p=$('#player'); if(!p.getAttribute('src')) return; clearTimeout(snipTimer); p.currentTime=Math.max(0,t-1.5); p.play().catch(()=>{}); snipTimer=setTimeout(()=>p.pause(),2300); }
 $('#alist').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b||!cur) return;
@@ -700,18 +794,22 @@ $('#alist').addEventListener('click',e=>{ const b=e.target.closest('button'); if
   if(b.dataset.mark!==undefined){ const a=cur.alerts[+b.dataset.mark]; a.label=a.label===b.dataset.v?null:b.dataset.v; }
   else if(b.dataset.delmiss!==undefined) cur.missed.splice(+b.dataset.delmiss,1);
   saveCur(); renderReview(); });
-$('#missBtn').addEventListener('click',()=>{ if(!cur) return; const t=Math.max(0,($('#player').currentTime||0)-0.3); cur.missed.push(Math.round(t*100)/100); saveCur(); renderReview(); });
+$('#missBtn').addEventListener('click',()=>{ if(!cur) return; const p=$('#player');   // paused: exactly where you put the playhead; playing: allow 0.3 s to react
+  const t=Math.max(0,(p.currentTime||0)-(p.paused?0:0.3)); cur.missed.push(Math.round(t*100)/100); saveCur(); renderReview(); });
+$('#sessName').addEventListener('change',e=>{ if(!cur) return; cur.name=e.target.value.trim().slice(0,40); e.target.value=cur.name; saveCur();
+  const o=[...$('#sessSel').options].find(o=>+o.value===cur.id); if(o) o.textContent=sessLabel(cur); libSoon(); });
+$('#reviewFold').addEventListener('toggle',()=>{ if($('#reviewFold').open) drawTl(); });
 $('#revDone').addEventListener('change',e=>{ if(!cur) return; cur.done=e.target.checked; saveCur(); refreshSessions(cur.id); });
 $('#sessSel').addEventListener('change',e=>openSession(e.target.value));
-$('#player').addEventListener('play',()=>{ const loop=()=>{ drawTl(); if(!$('#player').paused) requestAnimationFrame(loop); }; loop(); });
+$('#player').addEventListener('play',()=>{ const loop=()=>{ const p=$('#player'), t=p.currentTime||0;
+    if(tv&&(t>tv[1]||t<tv[0])){ const sp=tv[1]-tv[0]; setView(t-sp*0.1,t+sp*0.9); } else drawTl();      // keep the playhead in view when zoomed
+    if(!p.paused) requestAnimationFrame(loop); }; loop(); });
 $('#player').addEventListener('pause',()=>{ clearTimeout(snipTimer); drawTl(); });
 $('#player').addEventListener('seeked',drawTl);
-$('#tl').addEventListener('click',e=>{ if(!cur) return; const r=e.currentTarget.getBoundingClientRect(), p=$('#player');
-  if(p.getAttribute('src')) p.currentTime=Math.max(0,Math.min((e.clientX-r.left)/r.width*cur.dur,(p.duration||cur.dur)-0.05)); drawTl(); });
 addEventListener('resize',drawTl);
-$('#expBtn').addEventListener('click',async()=>{ if(!cur) return; const stamp=cur.date.slice(0,16).replace(/[:T]/g,'-');
+$('#expBtn').addEventListener('click',async()=>{ if(!cur) return; const stamp=(cur.name?cur.name.replace(/[^\w-]+/g,'-').replace(/^-+|-+$/g,'')+'-':'')+cur.date.slice(0,16).replace(/[:T]/g,'-');
   const dl=(blob,name)=>{ const a=document.createElement('a'); a.href=URL.createObjectURL(blob); a.download=name; document.body.appendChild(a); a.click(); setTimeout(()=>{URL.revokeObjectURL(a.href);a.remove();},1500); };
-  const j={app:'Filler Killer Lab', date:cur.date, model:cur.model, preset:cur.preset, threshold:cur.cfg, personalCalibration:cur.personal, durationS:cur.dur,
+  const j={app:'Filler Killer Lab', name:cur.name||'', date:cur.date, model:cur.model, preset:cur.preset, threshold:cur.cfg, personalCalibration:cur.personal, durationS:cur.dur,
     reviewedCompletely:cur.done, ums:libItems(cur).map(it=>({t:it.t, source:it.kind==='a'?'alert':'missed', label:it.kind==='a'?(cur.alerts[it.i].label||'unmarked'):(it.on?'real':'excluded'),
       start:it.span[0], end:it.span[1], trimmed:!!(cur.spans&&cur.spans[it.key])})), probs100fps:Array.from(cur.probs,v=>Math.round(v*1000)/1000)};
   dl(new Blob([JSON.stringify(j)],{type:'application/json'}),`filler-killer-${stamp}.json`);
@@ -770,7 +868,8 @@ function renderLib(){
   const groups=metas.map(m=>({m,items:libItems(m)})).filter(g=>g.items.length);
   const n=groups.reduce((a,g)=>a+g.items.length,0), on=groups.reduce((a,g)=>a+g.items.filter(i=>i.on).length,0);
   $('#libSum').textContent=n?`${n} ums in ${groups.length} recording${groups.length>1?'s':''} · ${on} included`:'No ums yet. Record a session with the on-device or hybrid engine.';
-  $('#libList').innerHTML=groups.map(g=>`<h3 class="libh">${sessDate(g.m)} · ${fmtT(g.m.dur)}</h3>`+g.items.map(it=>{ const id=g.m.id+'|'+it.key; libMap.set(id,it);
+  const esc=s=>s.replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+  $('#libList').innerHTML=groups.map(g=>`<h3 class="libh">${g.m.name?esc(g.m.name)+' · ':''}${sessDate(g.m)} · ${fmtT(g.m.dur)}</h3>`+g.items.map(it=>{ const id=g.m.id+'|'+it.key; libMap.set(id,it);
     return `<div class="clip${it.on?'':' off'}" data-id="${id}">
       <div class="cliprow"><label class="pill sm"><input type="checkbox" data-act="on" ${it.on?'checked':''} aria-label="Include the um at ${fmtT2(it.t)}"><span>${it.on?'Um':'Excluded'}</span></label>
         <span class="t" style="font:600 14px var(--mono)">${fmtT2(it.t)}</span><span class="what">${it.tag} · <b data-len>${(it.span[1]-it.span[0]).toFixed(2)} s</b></span></div>
