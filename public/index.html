@@ -42,6 +42,13 @@ body{background:var(--bg);color:var(--text);font:16px/1.5 var(--body);-webkit-te
 .bar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
 .wordmark{font:700 18px/1 var(--body);letter-spacing:.01em;color:var(--fg);margin:0}
 .wordmark span{color:var(--accent)}
+/* heading types "... err", "... umm", "... like.. you know", then rests on "... I mean" */
+.tw{display:block;min-height:1.05em;font-weight:500;color:var(--muted);font-size:.78em;letter-spacing:-.01em}
+@media (min-width:640px){.tw{display:inline;font-size:1em;margin-left:.25em}}
+.tw i{font-style:normal}
+.caret{display:inline-block;width:.07em;height:.9em;margin-left:.06em;vertical-align:-.08em;background:var(--accent);animation:blink 1.05s steps(1) infinite}
+@keyframes blink{50%{opacity:0}}
+@media (prefers-reduced-motion:reduce){.caret{animation:none}}
 .iconbtn{flex:none;width:44px;height:44px;display:grid;place-items:center;border-radius:22px;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer;touch-action:manipulation;text-decoration:none}
 .back{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px 0 4px;margin-left:-6px;border:0;background:transparent;color:var(--fg);font:600 15px var(--body);cursor:pointer}
 h1{font:400 clamp(34px,10vw,44px)/1.08 var(--display);color:var(--fg);margin:0;letter-spacing:-.01em;text-wrap:balance}
@@ -259,7 +266,7 @@ th{font:600 12px var(--body);color:var(--muted)}
   <button class="btn secondary" id="cdCancel">Cancel</button>
 </div>
 
-<header class="masthead"><p class="wordmark big">Filler <span>Killer</span> Lab</p></header>
+<header class="masthead"><p class="wordmark big">Filler <span>Killer</span> Lab<b class="tw" aria-hidden="true"><i id="twText"></i><i class="caret"></i></b></p></header>
 
 <nav class="tabbar" aria-label="Sections">
   <div class="tabin">
@@ -530,6 +537,17 @@ let rec=null, recGen=0, seenWS={};
 let ws=null, ctx=null, proc=null, stream=null, dgT0=0, dgChunkMs=0, dgSeen={};
 let beepCtx=null, wakeLock=null, timer=null;
 const $=s=>document.querySelector(s);
+
+// heading: slowly type each filler after "Lab", pause, delete; the last one stays
+(async()=>{ const el=$('#twText'), W=['... err','... umm','... like.. you know','... I mean'], wait=ms=>new Promise(r=>setTimeout(r,ms));
+  if(matchMedia('(prefers-reduced-motion: reduce)').matches){ el.textContent=W[W.length-1]; return; }
+  await wait(700);
+  for(let w=0;w<W.length;w++){
+    for(let i=1;i<=W[w].length;i++){ el.textContent=W[w].slice(0,i); await wait(W[w][i-1]==='.'?220:140); }
+    if(w===W.length-1) break;
+    await wait(1400);
+    for(let i=W[w].length-1;i>=0;i--){ el.textContent=W[w].slice(0,i); await wait(55); }
+    await wait(450); } })();
 
 // chips
 // every filler is a chip you tap on or off; um and uh lead and are a little bigger
