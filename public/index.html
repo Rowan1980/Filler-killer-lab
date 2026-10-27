@@ -233,7 +233,6 @@ th{font:600 12px var(--body);color:var(--muted)}
     <button data-go="vSetup"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg>Home</button>
     <button data-go="vLive"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>Practice</button>
     <button data-go="vSummary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/></svg>Summary</button>
-    <button data-go="libPanel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h2l2-5 3 10 3-8 2 3h6"/></svg>Library</button>
     <button data-go="vCal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Calibrate</button>
     <button data-go="vLab"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Settings</button>
   </div>
@@ -368,15 +367,7 @@ th{font:600 12px var(--body);color:var(--muted)}
   </div>
 </main>
 
-<!-- 5 · Um library -->
-<main class="screen" id="libPanel" hidden>
-  <div class="bar" style="min-height:0"><button class="back" id="libClose" hidden>‹ Back</button><span></span><span class="note" id="libWho"></span></div>
-  <div><h2>Your um library</h2><p class="lead" style="font-size:15px">Every um from your sessions. Trim each to just the sound, and leave out anything that isn't one. These help tune detection to your voice.</p></div>
-  <p class="note" id="libSum"></p>
-  <div class="alist" id="libList"></div>
-</main>
-
-<!-- 6 · Calibrate -->
+<!-- 5 · Calibrate (with the um library) -->
 <main class="screen" id="vCal" hidden>
   <div><h2>Tune to my voice</h2><p class="lead" style="font-size:15px">Check your ums in a few sessions, then tune detection to how you speak. <span class="note" id="calWho"></span></p></div>
   <section class="card">
@@ -388,8 +379,11 @@ th{font:600 12px var(--body);color:var(--muted)}
   <section class="stack"><h3>Check your ums</h3>
     <div class="navlist">
       <button class="navrow" id="revBtn"><span>Review sessions<small>Play a session back, mark each um, add any it missed</small></span><span aria-hidden="true">›</span></button>
-      <button class="navrow" id="libBtn"><span>Um library<small>Trim each um and leave out any that aren't</small></span><span aria-hidden="true">›</span></button>
     </div>
+  </section>
+  <section class="stack" id="libPanel"><h3>Um library</h3>
+    <p class="note">Every um from your sessions. Confirm each, trim it to just the sound, and leave out anything that isn't one. <span id="libSum"></span></p>
+    <div class="alist" id="libList"></div>
   </section>
   <section class="stack"><h3>How it works</h3>
     <p class="note">Practise with “Calibrate as I go” on, or review a session afterwards. Mark each um, add any it missed, and tick “I've reviewed every filler”. With about 3 minutes and 8 ums reviewed, tap Tune again. More reviewed sessions make it more reliable.</p>
@@ -524,7 +518,7 @@ document.querySelectorAll('.fillers').forEach(el=>el.addEventListener('change',s
 $('#moreWords').addEventListener('click',e=>{ const open=$('#fillerMore').hidden; $('#fillerMore').hidden=!open; e.currentTarget.setAttribute('aria-expanded',open); e.currentTarget.textContent=open?'Fewer words':'Add words'; });
 
 // ---------- Screens ----------
-const VIEWS=['vSetup','vLive','vSummary','vReview','libPanel','vCal','vLab'], TABS=['vSetup','vLive','vSummary','libPanel','vCal','vLab']; let viewStack=['vSetup'];
+const VIEWS=['vSetup','vLive','vSummary','vReview','vCal','vLab'], TABS=['vSetup','vLive','vSummary','vCal','vLab']; let viewStack=['vSetup'];
 function go(v,push=true){
   for(const id of VIEWS) $('#'+id).hidden=id!==v;
   if(TABS.includes(v)) viewStack=[v]; else if(push&&viewStack[viewStack.length-1]!==v) viewStack.push(v);
@@ -536,8 +530,7 @@ function go(v,push=true){
       $('#elapsed').textContent='00:00'; $('#feedWrap').hidden=true; $('#catch').hidden=true; $('#transcript').hidden=true;
       const e=$('#engine').value; $('#calLiveRow').hidden=!((e==='local'||e==='hybrid')&&$('#keepRec').checked&&mode==='live'); } }
   if(v==='vReview') setTimeout(()=>{ drawTl(); },30);
-  if(v==='libPanel') renderLib();
-  if(v==='vCal') calRefresh();
+  if(v==='vCal'){ calRefresh(); renderLib(); }
 }
 document.querySelector('.tabbar').addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b) go(b.dataset.go); });
 function back(){ viewStack.pop(); go(viewStack[viewStack.length-1]||'vSetup',false); }
@@ -1038,7 +1031,7 @@ renderWho();
 // um library: every um in this person's recordings (alerts not marked "not", plus missed ums), with play / trim / include.
 // Uses the same session objects as Review (metas), so both stay in step. Trim = meta.spans[key]; excluded missed = meta.off[key].
 const libAudio=new Map(), LIB_PAD=1.0; let actx=null, libSrc=null, libDrag=null, libMap=new Map(), libTimer=null; const libShown=new Set();
-const libOpen=()=>!$('#libPanel').hidden, missKey=t=>'m'+Math.round(t*100), missOn=(m,t)=>!(m.off&&m.off[missKey(t)]);
+const libOpen=()=>!$('#vCal').hidden, missKey=t=>'m'+Math.round(t*100), missOn=(m,t)=>!(m.off&&m.off[missKey(t)]);
 async function libGetAudio(id){
   if(!libAudio.has(id)){ if(libAudio.size>=6) libAudio.delete(libAudio.keys().next().value); libAudio.set(id, await dbGetAudio(id).catch(()=>null)); }
   return libAudio.get(id);
@@ -1056,10 +1049,9 @@ function libItems(m){ m.spans=m.spans||{}; m.off=m.off||{};
     .sort((x,y)=>x.t-y.t).map(it=>(it.ok=it.kind==='m'?it.on:m.alerts[it.i].label==='real', it.span=(m.spans[it.key]||estSpan(m,it.t)).slice(),it));
 }
 const sessDate=m=>new Date(m.date).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
-function updateLibBtn(){ const n=metas.reduce((a,m)=>a+m.alerts.filter(x=>x.label!=='not').length+m.missed.filter(t=>missOn(m,t)).length,0);
-  $('#libBtn small').textContent=`${n} um${n===1?'':'s'} for ${who()} · trim each and leave out any that aren't`; }
+function updateLibBtn(){ libSoon(); }   // the library lives on Calibrate now; refresh it if that page is showing
 function renderLib(){
-  $('#libWho').textContent=who(); libMap=new Map();
+  libMap=new Map();
   const groups=metas.map(m=>({m,items:libItems(m)})).filter(g=>g.items.length);
   const n=groups.reduce((a,g)=>a+g.items.length,0), on=groups.reduce((a,g)=>a+g.items.filter(i=>i.on).length,0);
   $('#libSum').textContent=n?`${n} ums in ${groups.length} recording${groups.length>1?'s':''} · ${on} included`:'No ums yet. Record a session with the on-device or hybrid engine.';
@@ -1116,8 +1108,6 @@ function libMove(e){ if(!libDrag) return; const {c,it,edge}=libDrag, r=c.getBoun
 $('#libList').addEventListener('pointermove',libMove);
 const libEnd=()=>{ if(!libDrag) return; const it=libDrag.it; libDrag=null; libSave(it); const el=[...$('#libList').querySelectorAll('.clip')].find(x=>libMap.get(x.dataset.id)===it); if(el) drawClip(el); };
 $('#libList').addEventListener('pointerup',libEnd); $('#libList').addEventListener('pointercancel',libEnd);
-$('#libBtn').addEventListener('click',()=>go('libPanel'));
-$('#libClose').addEventListener('click',()=>{ try{ libSrc&&libSrc.stop(); }catch(e){} back(); });
 $('#revBtn').addEventListener('click',()=>go('vReview'));
 
 function getCal(){ try{ return JSON.parse(localStorage.getItem(calKey())||'null'); }catch(e){ return null; } }
