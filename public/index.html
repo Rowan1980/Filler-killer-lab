@@ -5,324 +5,389 @@
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
 <title>Filler Killer Lab</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Bricolage+Grotesque:opsz,wght@12..96,500;12..96,800&family=IBM+Plex+Mono:wght@400;600&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,600;9..40,700&family=DM+Serif+Display&display=swap">
 <style>
-/* Layout: single column bench-test console; one big live counter, controls above, results below */
+/* Quiet Coach: warm, calm, encouraging. Ivory ground, forest headings and actions, terracotta for selection and detections. */
 :root{
-  --bg:#f3f4f1; --panel:#ffffff; --fg:#1b1d1a; --muted:#62675f; --line:#d9dcd4;
-  --accent:#d6361f; --accent-ink:#ffffff; --ok:#2f7d4a; --warn:#b26b00;
-  --display:"Bricolage Grotesque", "Arial Narrow", system-ui, sans-serif;
-  --body:"IBM Plex Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
-  --mono:"IBM Plex Mono", ui-monospace, Menlo, Consolas, monospace;
+  --bg:#F8F5ED; --surface:#EEE9DF; --panel:#FFFFFF; --fg:#173D32; --text:#62655F; --muted:#62655F; --line:#DDD6C8; --rule:#E5DFD3;
+  --accent:#A65538; --accent-hi:#BC674A; --accent-ink:#FFFFFF; --accent-text:#8E4830; --peach:#F6E6DC; --peach-line:#E3C8B8;
+  --sage:#B9C1AD; --ok:#173D32; --warn:#8A5A12; --miss:#2E4A6B; --miss-line:#9FB0C9; --primary-ink:#F8F5ED;
+  --display:"DM Serif Display", Georgia, "Times New Roman", serif;
+  --body:"DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  --mono:"DM Sans", system-ui, sans-serif;
   color-scheme:light;
 }
 @media (prefers-color-scheme:dark){:root{
-  --bg:#141613; --panel:#1d201c; --fg:#ecefe8; --muted:#9aa095; --line:#2f332d;
-  --accent:#ff5a3d; --accent-ink:#141613; --ok:#5fc27f; --warn:#e2a03f; color-scheme:dark}}
+  --bg:#13201B; --surface:#1C2C26; --panel:#22352E; --fg:#EFE9DC; --text:#C2C5BA; --muted:#AEB2A7; --line:#33473F; --rule:#2B3D36;
+  --accent:#D9906F; --accent-hi:#D9906F; --accent-ink:#1B120D; --accent-text:#E6A688; --peach:#3A2A22; --peach-line:#5A3F31;
+  --sage:#6E7A66; --ok:#9FC9B4; --warn:#E2B36A; --miss:#9DB9E0; --miss-line:#5C7395; --primary-ink:#13201B; color-scheme:dark}}
 *{box-sizing:border-box}
-[hidden]{display:none!important} /* .panel/.row set display, which would otherwise override the hidden attribute */
+[hidden]{display:none!important}
 html,body{margin:0}
-body{background:var(--bg);color:var(--fg);font:15px/1.5 var(--body);padding:0 0 max(24px,env(safe-area-inset-bottom))}
-.wrap{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:16px;
-  padding:16px max(16px,env(safe-area-inset-right)) 0 max(16px,env(safe-area-inset-left));box-sizing:content-box}
-@media (max-width:792px){.wrap{max-width:none}}
-/* top strip: title, settings, start button; stays put while the page scrolls */
-.topbar{position:sticky;top:0;z-index:20;background:color-mix(in srgb,var(--bg) 90%,transparent);-webkit-backdrop-filter:blur(12px);backdrop-filter:blur(12px);
-  border-bottom:1px solid var(--line);padding:max(10px,env(safe-area-inset-top)) max(16px,env(safe-area-inset-right)) 10px max(16px,env(safe-area-inset-left))}
-.topin{max-width:760px;margin:0 auto;display:flex;flex-direction:column;gap:8px;position:relative}
-.toprow{display:flex;align-items:center;justify-content:space-between;gap:12px}
-.topbar h1{font-size:clamp(22px,6vw,30px)}
-.gear{flex:none;width:44px;height:44px;display:grid;place-items:center;border-radius:12px;border:1px solid var(--line);background:var(--panel);color:var(--fg);cursor:pointer;touch-action:manipulation}
-.gear[aria-expanded=true]{border-color:var(--accent);color:var(--accent)}
-.gear:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.setpop{position:absolute;right:0;top:52px;width:min(460px,100%);max-height:min(72vh,640px);overflow:auto;z-index:30;box-shadow:0 14px 36px rgba(0,0,0,.2)}
-/* collapsible panel sections (review, log) */
-.sect>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;min-height:44px;border-radius:8px}
-.sect>summary::-webkit-details-marker{display:none}
-.sect>summary h2{flex:1 1 auto;min-width:0}
-.sect>summary::after{content:'';flex:none;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-3px) rotate(45deg);transition:transform .2s}
-.sect[open]>summary::after{transform:translateY(2px) rotate(-135deg)}
-.sect>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.sectbody{display:flex;flex-direction:column;gap:12px;padding-top:12px}
-.wrap>section,.wrap>button{scroll-margin-top:150px} /* keep scrolled-to sections clear of the top strip */
-h1{font:800 clamp(28px,7vw,44px)/1 var(--display);letter-spacing:-.02em;margin:0;text-wrap:balance}
-h1 span{color:var(--accent)}
-h2{font:800 18px/1.2 var(--display);margin:0}
-.sub{color:var(--muted);margin:4px 0 0}
-.panel{background:var(--panel);border:1px solid var(--line);border-radius:10px;padding:16px;display:flex;flex-direction:column;gap:12px}
-label{font-size:13px;color:var(--muted);display:flex;flex-direction:column;gap:4px}
-.row{display:flex;flex-wrap:wrap;gap:12px;align-items:flex-end}
+body{background:var(--bg);color:var(--text);font:16px/1.5 var(--body);-webkit-text-size-adjust:100%}
+.screen{max-width:560px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;gap:20px;
+  padding:max(16px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left))}
+.bar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
+.wordmark{font:700 18px/1 var(--body);letter-spacing:.01em;color:var(--fg);margin:0}
+.wordmark span{color:var(--accent)}
+.iconbtn{flex:none;width:44px;height:44px;display:grid;place-items:center;border-radius:22px;border:1px solid var(--line);background:transparent;color:var(--fg);cursor:pointer;touch-action:manipulation;text-decoration:none}
+.back{display:inline-flex;align-items:center;gap:6px;min-height:44px;padding:0 12px 0 4px;margin-left:-6px;border:0;background:transparent;color:var(--fg);font:600 15px var(--body);cursor:pointer}
+h1{font:400 clamp(34px,10vw,44px)/1.08 var(--display);color:var(--fg);margin:0;letter-spacing:-.01em;text-wrap:balance}
+h2{font:400 26px/1.15 var(--display);color:var(--fg);margin:0}
+h3{font:600 14px/1.3 var(--body);color:var(--fg);margin:0;letter-spacing:.01em}
+.lead{margin:6px 0 0;font-size:16px}
+.note{font-size:13px;color:var(--muted);margin:0;line-height:1.45}
+.err{margin:0;padding:12px 16px;border-radius:18px;background:var(--peach);color:var(--fg);font-size:14px}
+.card{background:var(--surface);border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:12px}
+.stack{display:flex;flex-direction:column;gap:10px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
 .row>*{min-width:0}
-select,input[type=password],input[type=text]{font:15px var(--body);padding:9px 10px;border:1px solid var(--line);border-radius:8px;background:var(--bg);color:var(--fg);min-width:0}
-.chips{display:flex;flex-wrap:wrap;gap:8px}
-.chip{display:inline-flex;flex-direction:row;align-items:center;gap:6px;border:1px solid var(--line);border-radius:999px;padding:6px 12px;font-size:14px;cursor:pointer;color:var(--fg);user-select:none}
-.chip input{accent-color:var(--accent);margin:0}
-.tabs{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;background:var(--line);padding:4px;border-radius:10px}
-.tabs button{font:600 14px var(--body);border:0;border-radius:7px;padding:10px 4px;background:transparent;color:var(--fg);cursor:pointer}
-.tabs button[aria-selected=true]{background:var(--panel)}
-.btn{font:700 17px var(--body);border:0;border-radius:10px;padding:14px 18px;cursor:pointer;background:var(--accent);color:var(--accent-ink)}
-.btn.secondary{background:transparent;color:var(--fg);border:1px solid var(--line);font-size:14px;padding:10px 14px}
-.btn:focus-visible,.tabs button:focus-visible,.chip:focus-within{outline:2px solid var(--accent);outline-offset:2px}
-.counter{display:flex;align-items:baseline;gap:12px;flex-wrap:wrap}
-.big{font:800 clamp(72px,22vw,120px)/.9 var(--display);font-variant-numeric:tabular-nums;letter-spacing:-.03em}
-.status{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.08em;color:var(--muted)}
-.status.live{color:var(--accent)}
-.tally{display:flex;flex-wrap:wrap;gap:8px}
-.tally span{font:500 14px var(--mono);border:1px solid var(--line);border-radius:6px;padding:4px 8px;font-variant-numeric:tabular-nums}
-.transcript{font:14px/1.6 var(--mono);color:var(--muted);max-height:160px;overflow:auto;white-space:pre-wrap;word-break:break-word;border-top:1px solid var(--line);padding-top:10px}
-.transcript b{color:var(--accent);font-weight:600}
-.tap{font:800 26px var(--display);width:100%;padding:34px 12px;border-radius:14px;border:2px dashed var(--accent);background:transparent;color:var(--accent);cursor:pointer;touch-action:manipulation}
-.tap:active{background:var(--accent);color:var(--accent-ink)}
-.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
-.stat{display:flex;flex-direction:column}
-.stat b{font:600 24px var(--mono);font-variant-numeric:tabular-nums}
-.stat small{color:var(--muted);font-size:12px}
-.script{font-size:17px;line-height:1.7;margin:0;padding:12px;background:var(--bg);border-radius:8px}
-table{border-collapse:collapse;width:100%;font:14px var(--mono);font-variant-numeric:tabular-nums}
-th,td{text-align:left;padding:6px 8px;border-bottom:1px solid var(--line)}
-th{font:600 12px var(--body);color:var(--muted);text-transform:uppercase;letter-spacing:.05em}
-.scroll{overflow-x:auto}
-.good{color:var(--ok)} .bad{color:var(--accent)} .meh{color:var(--warn)}
-.note{font-size:13px;color:var(--muted);margin:0}
-.err{color:var(--accent);font-weight:600;margin:0}
-#flash{position:fixed;inset:0;background:var(--accent);opacity:0;pointer-events:none;transition:opacity .25s}
-#flash.on{opacity:.35;transition:none}
-/* big start/stop button at the top */
-.start{font:800 clamp(19px,5.5vw,26px)/1 var(--display);letter-spacing:.08em;text-transform:uppercase;width:100%;min-height:60px;border-radius:16px;
-  box-shadow:0 8px 22px color-mix(in srgb,var(--accent) 35%,transparent);transition:transform .08s,box-shadow .2s,background .2s;touch-action:manipulation}
-.start:active{transform:scale(.985)}
-.start.live{background:var(--fg);color:var(--bg);animation:pulse 1.6s ease-in-out infinite}
-@keyframes pulse{0%,100%{box-shadow:0 0 0 0 color-mix(in srgb,var(--accent) 60%,transparent)}50%{box-shadow:0 0 0 12px transparent}}
-/* collapsible setup sections */
-.fold{border:1px solid var(--line);border-radius:12px;background:var(--bg)}
-.fold>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:10px;padding:12px 14px;min-height:50px;border-radius:12px}
-.fold>summary::-webkit-details-marker{display:none}
-.fold>summary::after{content:'';flex:none;margin-left:auto;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-3px) rotate(45deg);transition:transform .2s}
-.fold[open]>summary::after{transform:translateY(2px) rotate(-135deg)}
-.fold>summary:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.fold>summary .status{flex:none}
-.sumval{font:600 14px var(--body);color:var(--fg);min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-.foldbody{padding:2px 14px 14px;display:flex;flex-direction:column;gap:12px}
-/* filler pills: one size, filled when on */
-.pills{display:grid;grid-template-columns:repeat(auto-fill,minmax(128px,1fr));gap:10px}
+label{font-size:13px;color:var(--fg);display:flex;flex-direction:column;gap:6px;font-weight:600}
+select,input[type=password],input[type=text]{font:500 16px var(--body);height:46px;padding:0 16px;border:1px solid var(--line);border-radius:23px;background:var(--panel);color:var(--fg);min-width:0}
+.btn{font:600 17px var(--body);border:0;border-radius:29px;min-height:58px;padding:0 22px;cursor:pointer;background:var(--fg);color:var(--primary-ink);touch-action:manipulation;width:100%}
+.btn.secondary{background:transparent;color:var(--fg);border:1.5px solid var(--fg);font-size:15px;min-height:48px;width:auto}
+.btn.quiet{background:var(--panel);color:var(--fg);border:1px solid var(--line);font-size:15px;min-height:46px;width:auto}
+.btn:focus-visible,.iconbtn:focus-visible,.back:focus-visible,.ibtn:focus-visible,.seg button:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.link{font:600 15px var(--body);color:var(--fg);background:none;border:0;min-height:44px;cursor:pointer;text-decoration:underline;text-underline-offset:3px}
+/* person chip on setup */
+.person{align-self:flex-start;display:flex;flex-direction:row;align-items:center;gap:8px;height:44px;padding:0 6px 0 6px;border-radius:22px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:500 14px var(--body)}
+.person .av{flex:none;width:32px;height:32px;border-radius:16px;background:var(--fg);color:var(--bg);display:grid;place-items:center;font-weight:700;font-size:14px}
+.person select{height:36px;border:0;background:transparent;padding:0 8px;font-weight:600}
+/* pills: equal size, terracotta with tick when on */
+.pills{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .pill{position:relative;display:block;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
 .pill input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
-.pill span{display:flex;align-items:center;justify-content:center;gap:8px;height:52px;padding:0 12px;border-radius:999px;border:1.5px solid var(--line);
-  background:var(--panel);font:600 14px/1.15 var(--body);color:var(--fg);text-align:center;
-  transition:background .15s,border-color .15s,color .15s,box-shadow .15s,transform .08s}
-.pill span::before{content:'';flex:none;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--muted);font-size:12px;font-weight:800;line-height:1}
-.pill input:checked+span{background:linear-gradient(135deg,var(--accent),color-mix(in srgb,var(--accent) 70%,#ff9f43));border-color:transparent;color:var(--accent-ink);
-  box-shadow:0 4px 14px color-mix(in srgb,var(--accent) 32%,transparent)}
+.pill span{display:flex;align-items:center;justify-content:center;gap:8px;height:46px;padding:0 10px;border-radius:23px;border:1.5px solid var(--line);
+  background:var(--surface);font:600 15px/1.1 var(--body);color:var(--fg);text-align:center;transition:background .15s,border-color .15s,color .15s,transform .08s}
+.pill span::before{content:'';flex:none;display:grid;place-items:center;width:18px;height:18px;border-radius:50%;border:1.5px solid var(--muted);font-size:11px;font-weight:800;line-height:1}
+.pill input:checked+span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
 .pill input:checked+span::before{content:'✓';border-color:var(--accent-ink);background:var(--accent-ink);color:var(--accent)}
 .pill input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
 .pill:active span{transform:scale(.97)}
-@media (hover:hover){.pill:hover input:not(:checked)+span{border-color:var(--accent)}}
-/* review & calibrate */
-:root{--miss:#2f6fd6}
-@media (prefers-color-scheme:dark){:root{--miss:#6aa1ff}}
-#tl{width:100%;height:132px;display:block;border-radius:10px;background:var(--bg);border:1px solid var(--line);cursor:crosshair;touch-action:none}
-.alist{display:flex;flex-direction:column;gap:6px;max-height:340px;overflow:auto}
-.arow{display:flex;align-items:center;gap:8px;padding:6px 8px;border:1px solid var(--line);border-radius:12px}
-.arow .t{font:600 14px var(--mono);font-variant-numeric:tabular-nums;min-width:48px}
+.pills.more{margin-top:0}
+/* segmented control */
+.seg{display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr);gap:4px;padding:4px;border-radius:28px;background:var(--surface)}
+.seg button{height:44px;border-radius:22px;border:0;background:transparent;color:var(--text);font:500 14px var(--body);cursor:pointer}
+.seg button[aria-pressed=true]{background:var(--panel);color:var(--fg);font-weight:600;box-shadow:0 1px 2px rgba(23,61,50,.08)}
+.seg button[aria-pressed=true]::before{content:'✓ '}
+/* switch row */
+.switch{display:flex;flex-direction:row;align-items:center;justify-content:space-between;gap:12px;min-height:48px;padding:0 8px 0 18px;border-radius:24px;background:var(--surface);color:var(--fg);font:600 15px var(--body);cursor:pointer}
+.switch.on{background:var(--fg);color:var(--primary-ink)}
+.switch input{width:22px;height:22px;margin:0 10px 0 0;accent-color:var(--accent)}
+.switch small{font-weight:500;opacity:.85}
+/* live screen */
+.status{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 14px;border-radius:16px;background:var(--surface);color:var(--fg);font:600 13px var(--body)}
+.status.paused{background:var(--peach)}
+.timer{font:400 clamp(56px,20vw,88px)/1 var(--display);color:var(--fg);font-variant-numeric:tabular-nums}
+.timer.small{font-size:56px}
+#liveWave{width:100%;height:72px;display:block}
+.catch{display:flex;gap:14px;align-items:center;padding:14px 16px;border-radius:22px;background:var(--peach);transition:opacity .4s}
+.catch .ic{flex:none;width:40px;height:40px;border-radius:20px;background:var(--panel);color:var(--accent);display:grid;place-items:center}
+.catch b{display:block;color:var(--fg);font-size:16px}
+.catch .ibtn{border-color:var(--peach-line);color:var(--accent-text);background:transparent;white-space:nowrap;flex:none}
+.livectl{position:sticky;bottom:0;z-index:5;background:var(--bg);padding:10px 0 max(4px,env(safe-area-inset-bottom));margin-bottom:calc(-1*max(24px,env(safe-area-inset-bottom)))}
+.feed{display:flex;flex-direction:column;gap:10px;max-height:46vh;overflow-y:auto;overscroll-behavior:contain}
+.lc{border-radius:20px;background:var(--surface);padding:12px;display:flex;flex-direction:column;gap:10px}
+.lc.new{background:var(--peach);border:1.5px solid var(--peach-line)}
+.lc .hd{display:flex;align-items:center;gap:10px}
+.lc .hd .t{font:600 14px var(--body);color:var(--fg);font-variant-numeric:tabular-nums}
+.lc .hd .what{flex:1 1 auto;min-width:0;font-size:13px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.lc.done{flex-direction:row;align-items:center;padding:10px 12px;gap:10px;cursor:pointer}
+.lc.done .what{flex:1 1 auto;font-size:13px}
+.lc.not .what{text-decoration:line-through}
+.tag{flex:none;height:28px;padding:0 10px;border-radius:14px;font:600 12px var(--body);display:inline-flex;align-items:center}
+.tag.yes{background:var(--accent);color:var(--accent-ink)}
+.tag.no{border:1.5px solid var(--muted);color:var(--muted)}
+.lc canvas{width:100%;height:64px;display:block;border-radius:12px;background:var(--bg);touch-action:none;cursor:ew-resize}
+.two{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+.addmiss{min-height:46px;border-radius:23px;border:1.5px dashed var(--miss-line);background:transparent;color:var(--miss);font:600 14px var(--body);cursor:pointer}
+.count{font-size:15px}
+.count b{color:var(--fg);font-weight:600}
+.transcript{font:14px/1.6 var(--body);color:var(--muted);max-height:120px;overflow:auto;white-space:pre-wrap;word-break:break-word;border-top:1px solid var(--rule);padding-top:10px}
+.transcript b{color:var(--accent-text);font-weight:600}
+/* summary */
+.big{font:400 34px/1.15 var(--display);color:var(--fg)}
+.chart{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;align-items:end;height:150px;border-bottom:1px solid var(--line);padding-bottom:2px}
+.chart .c{display:flex;flex-direction:column;align-items:center;gap:6px;font-size:12px}
+.chart .b{width:100%;border-radius:8px 8px 3px 3px;background:var(--sage)}
+.chart .c.today{color:var(--accent-text);font-weight:700}
+.chart .c.today .b{background:var(--accent-hi)}
+.chartx{display:grid;grid-template-columns:repeat(7,minmax(0,1fr));gap:8px;font-size:12px;text-align:center}
+.chartx .today{font-weight:700;color:var(--accent-text)}
+.brk{display:flex;flex-direction:column}
+.brk div{display:flex;justify-content:space-between;align-items:center;min-height:44px;border-top:1px solid var(--rule);color:var(--fg)}
+.brk div:last-child{border-bottom:1px solid var(--rule)}
+.tally{display:none}
+/* lab tools */
+.who-pills{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px}
+.who-pills button{height:44px;padding:0 6px;border-radius:22px;border:1.5px solid var(--line);background:var(--surface);color:var(--fg);font:600 14px var(--body);display:flex;align-items:center;justify-content:center;gap:7px;cursor:pointer;min-width:0}
+.who-pills button span{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.who-pills button[aria-pressed=true]{background:var(--fg);border-color:var(--fg);color:var(--primary-ink)}
+.who-pills button.add{border-style:dashed;background:transparent}
+.navrow{display:flex;align-items:center;justify-content:space-between;gap:10px;min-height:56px;border-top:1px solid var(--rule);background:none;border-left:0;border-right:0;border-bottom:0;width:100%;text-align:left;color:var(--fg);font:500 15px var(--body);cursor:pointer;padding:0}
+.navrow small{display:block;font-size:12.5px;color:var(--muted);font-weight:400}
+.navlist{display:flex;flex-direction:column}
+.navlist .navrow:last-child{border-bottom:1px solid var(--rule)}
+.chip{display:inline-flex;flex-direction:row;align-items:center;gap:8px;min-height:44px;font:500 14px var(--body);cursor:pointer;color:var(--fg)}
+.chip input{width:20px;height:20px;accent-color:var(--fg);margin:0}
+details.sect>summary{list-style:none;cursor:pointer;display:flex;align-items:center;justify-content:space-between;min-height:48px;font:600 15px var(--body);color:var(--fg)}
+details.sect>summary::-webkit-details-marker{display:none}
+details.sect>summary::after{content:'';width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-3px) rotate(45deg);transition:transform .2s}
+details.sect[open]>summary::after{transform:translateY(2px) rotate(-135deg)}
+.sectbody{display:flex;flex-direction:column;gap:12px;padding-top:8px}
+/* review */
+#tl{width:100%;height:132px;display:block;border-radius:18px;background:var(--surface);cursor:crosshair;touch-action:none}
+.alist{display:flex;flex-direction:column;gap:0;max-height:none}
+.arow{display:flex;align-items:center;gap:8px;min-height:56px;border-top:1px solid var(--rule)}
+.arow:last-child{border-bottom:1px solid var(--rule)}
+.arow .t{font:600 14px var(--body);color:var(--fg);font-variant-numeric:tabular-nums;min-width:48px}
 .arow .what{font-size:13px;color:var(--muted);flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .arow .ibtn{flex:none}
-.ibtn{font:600 13px var(--body);border:1.5px solid var(--line);background:var(--panel);color:var(--fg);border-radius:999px;padding:0 12px;min-height:38px;cursor:pointer;touch-action:manipulation}
-.ibtn:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
-.ibtn.yes[aria-pressed=true]{background:var(--ok);border-color:var(--ok);color:#fff}
+.ibtn{font:600 13px var(--body);border:1px solid var(--line);background:var(--panel);color:var(--fg);border-radius:22px;padding:0 14px;min-height:44px;min-width:44px;cursor:pointer;touch-action:manipulation}
+.ibtn.yes[aria-pressed=true]{background:var(--fg);border-color:var(--fg);color:var(--primary-ink)}
 .ibtn.no[aria-pressed=true]{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
-.calcard{border-top:1px solid var(--line);padding-top:14px;display:flex;flex-direction:column;gap:10px}
+.ibtn.primary{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.good{color:var(--ok)} .bad{color:var(--accent-text)} .meh{color:var(--warn)}
+audio{width:100%}
 /* um library */
-.libh{font:600 12px var(--mono);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:10px 0 0}
-.clip{border:1px solid var(--line);border-radius:12px;padding:8px;display:flex;flex-direction:column;gap:6px;transition:opacity .15s}
-.clip.off{opacity:.55}
+.libh{font:600 12px var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:10px 0 0}
+.clip{border-radius:22px;background:var(--surface);padding:12px;display:flex;flex-direction:column;gap:8px;transition:opacity .15s;margin-top:8px}
+.clip.off{opacity:.6;background:transparent;border:1.5px dashed var(--line)}
 .cliprow{display:flex;align-items:center;gap:8px}
-.cliprow .what{font-size:13px;color:var(--muted);flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.cliprow .what{font-size:12.5px;color:var(--muted);flex:1 1 auto;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 .cliprow.btns{justify-content:flex-end}
 .pill.sm{flex:none}
 .pill.sm span{height:36px;min-width:104px;padding:0 12px;font-size:13px}
-.wave{width:100%;height:64px;display:block;border-radius:8px;background:var(--bg);touch-action:none;cursor:ew-resize}
-@media (prefers-reduced-motion:reduce){#flash{transition:none}.start.live{animation:none}}
+.wave{width:100%;height:64px;display:block;border-radius:12px;background:var(--bg);touch-action:none;cursor:ew-resize}
+/* tests */
+.tap{font:400 28px var(--display);width:100%;padding:30px 12px;border-radius:24px;border:2px dashed var(--accent);background:transparent;color:var(--accent-text);cursor:pointer;touch-action:manipulation}
+.tap:active{background:var(--accent);color:var(--accent-ink)}
+.stats{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:12px}
+.stat{display:flex;flex-direction:column}
+.stat b{font:600 24px var(--body);color:var(--fg);font-variant-numeric:tabular-nums}
+.stat small{color:var(--muted);font-size:12px}
+.script{font-size:17px;line-height:1.7;margin:0;padding:14px 16px;background:var(--surface);border-radius:18px;color:var(--fg)}
+table{border-collapse:collapse;width:100%;font:14px var(--body);font-variant-numeric:tabular-nums}
+th,td{text-align:left;padding:8px;border-bottom:1px solid var(--rule)}
+th{font:600 12px var(--body);color:var(--muted)}
+.scroll{overflow-x:auto}
+.modebar{display:flex;align-items:center;justify-content:space-between;gap:10px;padding:10px 10px 10px 16px;border-radius:22px;background:var(--peach);color:var(--fg);font:600 14px var(--body)}
+#flash{position:fixed;inset:0;background:var(--accent);opacity:0;pointer-events:none;transition:opacity .25s}
+#flash.on{opacity:.25;transition:none}
+@media (prefers-reduced-motion:reduce){#flash{transition:none}.catch{transition:none}.pill span{transition:none}}
 </style>
 </head>
 <body>
 <div id="flash"></div>
-<header class="topbar">
-  <div class="topin">
-    <div class="toprow">
-      <h1>Filler <span>Killer</span> Lab</h1>
-      <button class="gear" id="setBtn" aria-label="Settings" aria-expanded="false" aria-controls="setPanel">
-        <svg viewBox="0 0 24 24" width="22" height="22" aria-hidden="true"><path fill="currentColor" d="M19.4 13a7.5 7.5 0 0 0 0-2l2.1-1.6-2-3.5-2.5 1a7.6 7.6 0 0 0-1.7-1L15 3.3h-4l-.4 2.6a7.6 7.6 0 0 0-1.7 1l-2.5-1-2 3.5L6.6 11a7.5 7.5 0 0 0 0 2l-2.1 1.6 2 3.5 2.5-1a7.6 7.6 0 0 0 1.7 1l.4 2.6h4l.4-2.6a7.6 7.6 0 0 0 1.7-1l2.5 1 2-3.5zM13 15.5a3.5 3.5 0 1 1 0-7 3.5 3.5 0 0 1 0 7z" transform="translate(-1 0)"/></svg>
-      </button>
-    </div>
-    <button class="btn start" id="startBtn">Start listening</button>
-    <p class="err" id="err" hidden></p>
-    <section class="panel setpop" id="setPanel" hidden aria-label="Settings">
-    <div class="row" style="justify-content:space-between;align-items:center"><h2>Settings</h2><button class="btn secondary" id="setClose">Done</button></div>
-    <p class="note">Prototype bench test: live filler alerts, detection latency and accuracy against a known script. Current engine: <b id="engineSum"></b>.</p>
-    <div class="row">
-      <label style="flex:1 1 220px">Speech engine
-        <select id="engine">
-          <option value="browser">Browser speech recognition (free)</option>
-          <option value="deepgram">Deepgram streaming (API key, keeps um/uh)</option>
-          <option value="local">On-device sound detector (experimental, free)</option>
-          <option value="hybrid" selected>Hybrid: on-device um/uh + browser words</option>
-        </select>
-      </label>
-      <label id="langWrap" style="flex:0 1 140px">Accent
-        <select id="lang"><option value="en-AU">English (AU)</option><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option></select>
-      </label>
-    </div>
-    <div class="row" id="dgRow" hidden>
-      <label style="flex:1 1 260px">Deepgram API key
-        <input id="dgKey" type="password" autocomplete="off" placeholder="Paste your key">
-      </label>
-      <label style="flex:0 1 140px">Model
-        <select id="dgModel"><option value="nova-2">nova-2</option><option value="nova-3">nova-3</option></select>
-      </label>
-    </div>
-    <div class="row" id="sensRow" hidden>
-      <label style="flex:0 1 220px">Detector sensitivity
-        <select id="sens"><option value="sensitive">Sensitive (catches more, more false alerts)</option><option value="balanced" selected>Balanced</option><option value="strict">Strict (fewer false alerts)</option></select>
-      </label>
-      <label class="chip"><input type="checkbox" id="keepRec" checked> Keep a recording to review (stays on this device)</label>
-    </div>
-    <p class="note" id="localNote" hidden>On-device model v9 (170k parameters, 25 Oct 2026, trained with background noise, room echo and phone-mic effects, listening to pitch steadiness as well as the sound, and hearing a quarter of a second past each moment before deciding) that listens for um/uh/er. No audio leaves your phone. On a 3.1-hour real podcast test (928 ums) it caught about 84% / 72% / 58% of ums at roughly 63 / 25 / 13 false alerts per hour (sensitive / balanced / strict). With noise added (café chatter, street, music, a room, a pocket) it still caught 57–66% at 25 false alerts per hour or fewer. The alert comes about 0.4 s after an um starts.</p>
-    <p class="note" id="dgNote" hidden>Your key stays in this browser and goes only to Deepgram. Use a key you can revoke.</p>
-    </section>
-  </div>
-</header>
 
-<div class="wrap">
-  <section class="panel" aria-label="Who's talking">
-    <div class="row" style="flex-wrap:nowrap;gap:8px">
-      <label style="flex:1 1 auto">Who's talking
-        <select id="who"></select>
-      </label>
-      <button class="btn secondary" id="whoAdd" aria-label="Add a person" style="flex:none">+ Add</button>
-      <button class="btn secondary" id="whoDel" aria-label="Remove this person" style="flex:none">Remove</button>
-    </div>
-  </section>
-
-  <section class="panel" aria-label="Fillers and prompts">
-    <details class="fold" id="fillerFold">
-      <summary><span class="status">Fillers to count</span><span class="sumval" id="fillerSum"></span></summary>
-      <div class="foldbody"><div class="pills" id="fillerChips"></div></div>
-    </details>
-    <details class="fold" id="promptFold">
-      <summary><span class="status">Prompt on each filler</span><span class="sumval" id="promptSum"></span></summary>
-      <div class="foldbody"><div class="pills" id="promptChips">
-        <label class="pill"><input type="checkbox" id="aBeep" checked><span>Beep</span></label>
-        <label class="pill"><input type="checkbox" id="aFlash" checked><span>Screen flash</span></label>
-        <label class="pill"><input type="checkbox" id="aVibe" checked><span>Vibrate (Android)</span></label>
-      </div></div>
-    </details>
-  </section>
-
-  <div class="tabs" role="tablist">
-    <button role="tab" aria-selected="true" data-mode="live">Live</button>
-    <button role="tab" aria-selected="false" data-mode="latency">Latency test</button>
-    <button role="tab" aria-selected="false" data-mode="accuracy">Accuracy test</button>
+<!-- 1 · Practice setup -->
+<main class="screen" id="vSetup">
+  <div class="bar">
+    <p class="wordmark">Filler <span>Killer</span> Lab</p>
+    <button class="iconbtn" id="setBtn" aria-label="Lab tools and settings">
+      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
+    </button>
   </div>
 
-  <section class="panel">
-    <p class="note" id="modeNote"></p>
-    <div class="counter">
-      <div class="big" id="total">0</div>
-      <div><div class="status" id="status">Idle</div><div class="note" id="elapsed">0:00 · 0.0 fillers/min</div></div>
-    </div>
-    <div class="tally" id="tally"></div>
-    <div class="transcript" id="transcript" aria-live="polite">Transcript appears here.</div>
+  <label class="person"><span class="av" id="whoAv" aria-hidden="true">M</span><span class="sr" style="font-weight:500">Practising as</span>
+    <select id="who" aria-label="Who's practising"></select></label>
+
+  <div>
+    <h1>Make every word count.</h1>
+    <p class="lead">Choose the filler words you want to catch, then set your feedback preference.</p>
+  </div>
+
+  <div class="modebar" id="modeBar" hidden><span id="modeNote"></span><button class="ibtn" id="modeCancel">Back to practice</button></div>
+
+  <section class="stack" aria-labelledby="hFill">
+    <div class="bar" style="min-height:0"><h3 id="hFill">Filler words <span class="note" id="fillerSum" style="font-weight:500"></span></h3>
+      <button class="link" id="moreWords" aria-expanded="false">Add words</button></div>
+    <div class="pills fillers" id="fillerChips"></div>
+    <div class="pills fillers more" id="fillerMore" hidden></div>
   </section>
 
-  <section class="panel" id="reviewPanel" hidden>
-    <details class="sect" id="reviewFold">
-    <summary><h2>Review &amp; calibrate · <span id="whoName"></span></h2></summary>
-    <div class="sectbody">
-    <div class="row">
-      <label style="flex:1 1 200px">Recording
-        <select id="sessSel"></select>
-      </label>
-      <label style="flex:1 1 200px">Name / tag
-        <input type="text" id="sessName" maxlength="40" placeholder="e.g. Dinner, Work call" autocomplete="off">
-      </label>
+  <section class="stack" aria-labelledby="hFb">
+    <h3 id="hFb">Feedback <span class="note" id="promptSum" style="font-weight:500"></span></h3>
+    <div class="pills" id="promptChips">
+      <label class="pill"><input type="checkbox" id="aVibe" checked><span>Vibration</span></label>
+      <label class="pill"><input type="checkbox" id="aBeep"><span>Sound</span></label>
     </div>
-    <p class="note">Play the recording back. Mark each alert as a real um or not, and add any um it missed. Pinch or scroll on the waveform to zoom, drag to move along, tap to jump there.</p>
+    <p class="note" id="fbNote">Get a gentle buzz when you say a filler.</p>
+  </section>
+
+  <div style="flex:1 1 auto"></div>
+  <p class="err" id="err" hidden role="alert"></p>
+  <button class="btn" id="startBtn">Start practice</button>
+  <p class="note" style="text-align:center" id="audioNote">Um and uh are detected on this phone. Word fillers use your browser's speech recognition, which may process audio online.</p>
+</main>
+
+<!-- 2 · Live practice -->
+<main class="screen" id="vLive" hidden>
+  <div class="bar">
+    <span class="status" id="status" role="status">Practice session · Listening</span>
+    <span class="note" id="liveWho"></span>
+  </div>
+  <div class="bar" style="align-items:flex-end">
+    <div><div class="timer small" id="elapsed" aria-live="off">00:00</div><p class="note" style="font-size:15px">Keep going. Take your time.</p></div>
+    <span class="count"><b><span id="total">0</span> <span id="totalWord">fillers</span></b></span>
+  </div>
+  <label class="switch on" id="calLiveRow"><span>Calibrate as I go <small id="calLiveState">· On</small></span>
+    <input type="checkbox" id="calLive" role="switch" checked></label>
+  <canvas id="liveWave" aria-hidden="true"></canvas>
+  <div class="catch" id="catch" role="status" aria-live="polite" hidden>
+    <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="7.5" y="4" width="9" height="16" rx="2"/><path d="M4 9v6M20 9v6"/></svg></span>
+    <div style="flex:1 1 auto;min-width:0"><b id="catchTitle">Caught an ‘um’</b><span id="catchSub" style="font-size:14px">One gentle buzz. Keep going.</span></div>
+    <button class="ibtn" id="catchUndo">Not an um</button>
+  </div>
+  <section class="stack" id="feedWrap" aria-label="Ums this session, newest at the bottom">
+    <div><h3>Ums this session</h3><p class="note">Check each one as it appears · drag the edges to trim</p></div>
+    <div class="feed" id="feed"></div>
+    <button class="addmiss" id="liveMiss">+ I just said one it missed</button>
+  </section>
+  <section class="card" id="latencyPanel" hidden>
+    <h2>Response time</h2>
+    <p class="note">Say “um” at the exact moment you tap the button. Repeat 10 times with a pause between each. The app times tap → buzz.</p>
+    <button class="tap" id="tapBtn">Tap + say “um”</button>
+    <div class="stats">
+      <div class="stat"><b id="lMed">–</b><small>Median tap → buzz (ms)</small></div>
+      <div class="stat"><b id="lRange">–</b><small>Fastest / slowest (ms)</small></div>
+      <div class="stat"><b id="lHit">–</b><small>Taps caught</small></div>
+      <div class="stat"><b id="lAudio">–</b><small>Word end → buzz (ms, Deepgram)</small></div>
+    </div>
+  </section>
+  <section class="card" id="accPanel" hidden>
+    <h2>Read-aloud check</h2>
+    <p class="note">Read this aloud at a natural pace, saying every filler, then tap End. It contains look-alikes (“I like the margin”, “Do you know”) that shouldn't count.</p>
+    <p class="script" id="script"></p>
+    <div class="scroll"><table id="accTable"><thead><tr><th>Filler</th><th>Expected</th><th>Caught</th><th>Missed</th><th>Extra</th></tr></thead><tbody></tbody></table></div>
+    <div class="stats">
+      <div class="stat"><b id="aRecall">–</b><small>Caught</small></div>
+      <div class="stat"><b id="aExtra">–</b><small>Extra buzzes</small></div>
+    </div>
+  </section>
+  <div class="transcript" id="transcript" aria-live="polite" hidden></div>
+  <div class="tally" id="tally"></div>
+  <div style="flex:1 1 auto"></div>
+  <div class="two livectl">
+    <button class="btn secondary" id="pauseBtn" style="width:100%;min-height:56px">Pause</button>
+    <button class="btn" id="endBtn" style="min-height:56px">End practice</button>
+  </div>
+</main>
+
+<!-- 3 · Session summary -->
+<main class="screen" id="vSummary" hidden>
+  <div class="bar"><p class="wordmark">Filler <span>Killer</span> Lab</p><span class="note" id="sumWho"></span></div>
+  <div><h1>Finding your flow</h1><p class="lead">Small steps towards more confident speaking.</p></div>
+  <div class="card" style="gap:4px"><span class="big" id="sumBig">0 fillers in 0 minutes</span><span class="note" style="font-size:14px" id="sumRate"></span></div>
+  <section class="stack" id="chartWrap" hidden>
+    <div class="bar" style="min-height:0"><h3>Fillers per minute · last 7 days</h3><span class="note" id="chartN"></span></div>
+    <div class="chart" id="chart" role="img"></div>
+    <div class="chartx" id="chartx" aria-hidden="true"></div>
+  </section>
+  <section class="stack"><h3>This session</h3><div class="brk" id="sumBrk"></div></section>
+  <div style="flex:1 1 auto"></div>
+  <button class="btn" id="againBtn">Practice again</button>
+  <button class="link" id="sumReview">Review this session</button>
+</main>
+
+<!-- 4 · Review a session -->
+<main class="screen" id="vReview" hidden>
+  <div class="bar"><button class="back" data-back>‹ Back</button><span class="note" id="whoName"></span></div>
+  <h2>Review session</h2>
+  <p class="note" id="revEmpty">No recordings yet for this person. Practise with the on-device or hybrid engine, with “Keep a recording” on in Lab tools.</p>
+  <div class="stack" id="reviewPanel" hidden>
+    <div class="row">
+      <label style="flex:1 1 200px">Recording<select id="sessSel"></select></label>
+      <label style="flex:1 1 200px">Name this session<input type="text" id="sessName" maxlength="40" placeholder="e.g. Dinner, Work call" autocomplete="off"></label>
+    </div>
     <canvas id="tl" aria-label="Waveform and um likelihood: pinch or scroll to zoom, drag to pan, tap to jump"></canvas>
     <div class="row" style="align-items:center;gap:8px">
       <button class="ibtn" id="zoomOut" aria-label="Zoom out">−</button>
       <button class="ibtn" id="zoomIn" aria-label="Zoom in">+</button>
-      <button class="ibtn" id="zoomFit">Whole recording</button>
+      <button class="ibtn" id="zoomFit">Whole session</button>
       <span class="note" id="zoomInfo"></span>
     </div>
-    <p class="note">Grey: sound · line: um likelihood · dashed: alert threshold · <span class="good">●</span> real · <span class="bad">✕</span> not an um · ○ unmarked · <span style="color:var(--miss)">▲</span> missed</p>
-    <audio id="player" controls preload="auto" style="width:100%"></audio>
-    <div class="row" style="align-items:center">
-      <button class="btn secondary" id="missBtn">+ Missed um here</button>
-      <span class="note" id="revStats"></span>
-    </div>
+    <p class="note">Pinch to zoom · tap to jump. Grey: sound · line: um likelihood · dashed: buzz threshold · ● filler · ✕ not one · ○ not reviewed · <span style="color:var(--miss)">▲</span> added</p>
+    <audio id="player" controls preload="auto"></audio>
+    <button class="addmiss" id="missBtn">+ Add a missed filler here</button>
+    <p class="note" id="revStats"></p>
     <div class="alist" id="alist"></div>
-    <label class="chip" style="align-self:flex-start"><input type="checkbox" id="revDone"> I've marked every um in this recording</label>
-    <div class="row">
-      <button class="btn secondary" id="expBtn">Export (WAV + labels)</button>
-      <button class="btn secondary" id="delBtn">Delete recording</button>
-    </div>
-    <div class="calcard">
-      <h2>Calibrate to my voice</h2>
-      <p class="note" id="calNote"></p>
-      <button class="btn secondary" id="calBtn">Calibrate from my marked recordings</button>
-      <div class="scroll"><table id="calTable" hidden><thead><tr><th>Setting</th><th>Standard</th><th>Yours</th></tr></thead><tbody></tbody></table></div>
-      <label class="chip" style="align-self:flex-start"><input type="checkbox" id="useCal" disabled> Use my calibration</label>
-    </div>
-    </div>
-    </details>
+    <label class="chip"><input type="checkbox" id="revDone"> I've reviewed every filler in this session</label>
+    <div class="row"><button class="btn quiet" id="expBtn">Export (WAV + labels)</button><button class="btn quiet" id="delBtn">Delete recording</button></div>
+  </div>
+</main>
+
+<!-- 5 · Um library -->
+<main class="screen" id="libPanel" hidden>
+  <div class="bar"><button class="back" id="libClose">‹ Back</button><span class="note" id="libWho"></span></div>
+  <div><h2>Your um library</h2><p class="lead" style="font-size:15px">Every um from your sessions. Trim each to just the sound, and leave out anything that isn't one. These help tune detection to your voice.</p></div>
+  <p class="note" id="libSum"></p>
+  <div class="alist" id="libList"></div>
+</main>
+
+<!-- 6 · Lab tools -->
+<main class="screen" id="vLab" hidden>
+  <div class="bar"><button class="back" data-back>‹ Back</button><span></span></div>
+  <h2>Lab tools</h2>
+
+  <section class="stack"><h3>Who's practising</h3>
+    <div class="who-pills" id="whoPills"></div>
+    <button class="link" id="whoDel" style="align-self:flex-start">Remove this person</button>
+    <button id="whoAdd" hidden></button>
   </section>
 
-  <button class="btn secondary" id="libBtn">Um library</button>
-
-  <section class="panel" id="libPanel" hidden>
-    <div class="row" style="justify-content:space-between;align-items:center">
-      <h2>Um library · <span id="libWho"></span></h2>
-      <button class="btn secondary" id="libClose">Close</button>
-    </div>
-    <p class="note">Every um found in this person's recordings. Play each one, drag the edges of the highlighted part to trim it to just the um, and switch off anything that isn't an um.</p>
-    <p class="note" id="libSum"></p>
-    <div class="alist" id="libList" style="max-height:none"></div>
+  <section class="card">
+    <div class="bar" style="min-height:0;align-items:flex-start"><div><h3 style="font-size:16px">Tune to my voice</h3><p class="note" id="calNote"></p></div>
+      <label class="chip" style="flex:none"><input type="checkbox" id="useCal" disabled> On</label></div>
+    <div class="scroll"><table id="calTable" hidden><thead><tr><th>Setting</th><th>Standard</th><th>Yours</th></tr></thead><tbody></tbody></table></div>
+    <div class="row"><button class="btn quiet" id="libBtn">Um library</button><button class="btn quiet" id="revBtn">Review sessions</button><button class="btn quiet" id="calBtn">Tune again</button></div>
   </section>
 
-  <section class="panel" id="latencyPanel" hidden>
-    <h2>Latency test</h2>
-    <p class="note">Start listening, then say "um" at the exact moment you tap the button. Repeat 10 times with a pause between each. The app times tap → alert.</p>
-    <button class="tap" id="tapBtn">Tap + say "um"</button>
-    <div class="stats">
-      <div class="stat"><b id="lMed">–</b><small>Median tap → alert (ms)</small></div>
-      <div class="stat"><b id="lRange">–</b><small>Fastest / slowest (ms)</small></div>
-      <div class="stat"><b id="lHit">–</b><small>Taps caught</small></div>
-      <div class="stat"><b id="lAudio">–</b><small>Word end → alert (ms, Deepgram)</small></div>
-    </div>
-  </section>
-
-  <section class="panel" id="accPanel" hidden>
-    <h2>Accuracy test</h2>
-    <p class="note">Start listening, read this aloud at a natural pace (say every filler), then tap Stop. It contains decoys ("I like the margin", "Do you know") that should not count.</p>
-    <p class="script" id="script"></p>
-    <div class="scroll"><table id="accTable"><thead><tr><th>Filler</th><th>Expected</th><th>Detected</th><th>Missed</th><th>Extra</th></tr></thead><tbody></tbody></table></div>
-    <div class="stats">
-      <div class="stat"><b id="aRecall">–</b><small>Caught (recall)</small></div>
-      <div class="stat"><b id="aExtra">–</b><small>False alerts</small></div>
+  <section class="stack"><h3>Tests</h3>
+    <div class="navlist">
+      <button class="navrow" id="testLatency"><span>Response time<small>Tap as you say “um” to time the buzz</small></span><span aria-hidden="true">›</span></button>
+      <button class="navrow" id="testAcc"><span>Read-aloud check<small>Read a short script to see what's caught</small></span><span aria-hidden="true">›</span></button>
     </div>
   </section>
 
-  <section class="panel">
-    <details class="sect" id="logFold">
-    <summary><h2>Event log</h2></summary>
+  <section class="stack"><h3>Detection</h3>
+    <label>Listening engine
+      <select id="engine">
+        <option value="browser">Browser speech recognition (free)</option>
+        <option value="deepgram">Deepgram streaming (API key, keeps um/uh)</option>
+        <option value="local">On-device sound detector only</option>
+        <option value="hybrid" selected>On-device um/uh + browser words</option>
+      </select></label>
+    <span class="note">Current: <b id="engineSum"></b></span>
+    <label id="langWrap">Accent<select id="lang"><option value="en-AU">English (AU)</option><option value="en-US">English (US)</option><option value="en-GB">English (UK)</option></select></label>
+    <div class="row" id="dgRow" hidden>
+      <label style="flex:1 1 220px">Deepgram API key<input id="dgKey" type="password" autocomplete="off" placeholder="Paste your key"></label>
+      <label style="flex:0 1 140px">Model<select id="dgModel"><option value="nova-2">nova-2</option><option value="nova-3">nova-3</option></select></label>
+    </div>
+    <p class="note" id="dgNote" hidden>Your key stays in this browser and goes only to Deepgram. Use a key you can revoke.</p>
+    <div id="sensRow" class="stack">
+      <span style="font:600 13px var(--body);color:var(--fg)">Sensitivity</span>
+      <div class="seg" role="group" aria-label="Sensitivity" id="sensSeg">
+        <button data-v="sensitive" aria-pressed="false">Catch more</button><button data-v="balanced" aria-pressed="true">Balanced</button><button data-v="strict" aria-pressed="false">Fewer buzzes</button>
+      </div>
+      <select id="sens" hidden><option value="sensitive">sensitive</option><option value="balanced" selected>balanced</option><option value="strict">strict</option></select>
+      <label class="chip"><input type="checkbox" id="keepRec" checked> Keep a recording of each session to review (stays on this phone)</label>
+    </div>
+    <label class="chip"><input type="checkbox" id="aFlash"> Also flash the screen (off by default)</label>
+    <p class="note" id="localNote">On-device model v9: catches about 84% / 72% / 58% of ums at roughly 63 / 25 / 13 false buzzes per hour (catch more / balanced / fewer buzzes) on a 3.1-hour real podcast test, and 57–66% with background noise. The buzz comes about 0.4 s after an um starts.</p>
+  </section>
+
+  <details class="sect" id="logFold">
+    <summary>Event log</summary>
     <div class="sectbody">
-    <button class="btn secondary" id="copyBtn" style="align-self:flex-start">Copy results</button>
-    <div class="scroll"><table id="log"><thead><tr><th>Time</th><th>Filler</th><th>Engine</th><th>Latency</th></tr></thead><tbody><tr><td colspan="4" class="note">No fillers yet.</td></tr></tbody></table></div>
-    <textarea id="copyFallback" hidden rows="6" style="width:100%;font:13px var(--mono)"></textarea>
+      <button class="btn quiet" id="copyBtn" style="align-self:flex-start">Copy results</button>
+      <div class="scroll"><table id="log"><thead><tr><th>Time</th><th>Filler</th><th>Engine</th><th>Latency</th></tr></thead><tbody><tr><td colspan="4" class="note">No fillers yet.</td></tr></tbody></table></div>
+      <textarea id="copyFallback" hidden rows="6" style="width:100%;font:13px var(--body)"></textarea>
     </div>
-    </details>
-  </section>
-</div>
+  </details>
+
+  <p class="note">Your audio: um and uh are detected on this phone. Word fillers use your browser's speech recognition, which may send audio to its provider. Review recordings stay on this phone until you export or delete them.</p>
+</main>
 
 <script>
 // ---------- Filler detection ----------
@@ -347,7 +412,7 @@ const YOUKNOW_NOT_AFTER = new Set('do did does don\'t didn\'t doesn\'t if what w
 const KIND_NOT_AFTER = new Set('a an the what this that which any some no every one'.split(' '));
 
 function normalize(t){return t.toLowerCase().replace(/[’‘]/g,"'").replace(/[^a-z' ]+/g,' ').replace(/\s+/g,' ').trim();}
-function enabled(){const s=new Set();document.querySelectorAll('#fillerChips input:checked').forEach(i=>s.add(i.value));return s;}
+function enabled(){const s=new Set();document.querySelectorAll('.fillers input:checked').forEach(i=>s.add(i.value));return s;}
 
 // Returns [{id, i}] for a word array
 function detect(words){
@@ -388,9 +453,26 @@ let beepCtx=null, wakeLock=null, timer=null;
 const $=s=>document.querySelector(s);
 
 // chips
-$('#fillerChips').innerHTML = FILLERS.map(f=>`<label class="pill"><input type="checkbox" value="${f.id}" ${f.on?'checked':''}><span>${f.label}</span></label>`).join('');
-function syncFillerSum(){const n=enabled().size;$('#fillerSum').textContent=`${n} of ${FILLERS.length} on`;}
-$('#fillerChips').addEventListener('change',syncFillerSum); syncFillerSum();
+const pillHtml=f=>`<label class="pill"><input type="checkbox" value="${f.id}" ${f.on?'checked':''}><span>${f.label}</span></label>`;
+$('#fillerChips').innerHTML = FILLERS.slice(0,6).map(pillHtml).join('');   // the six everyday ones; the rest under "Add words"
+$('#fillerMore').innerHTML = FILLERS.slice(6).map(pillHtml).join('');
+function syncFillerSum(){const n=enabled().size;$('#fillerSum').textContent=`· ${n} of ${FILLERS.length} on`;}
+document.querySelectorAll('.fillers').forEach(el=>el.addEventListener('change',syncFillerSum)); syncFillerSum();
+$('#moreWords').addEventListener('click',e=>{ const open=$('#fillerMore').hidden; $('#fillerMore').hidden=!open; e.currentTarget.setAttribute('aria-expanded',open); e.currentTarget.textContent=open?'Fewer words':'Add words'; });
+
+// ---------- Screens ----------
+const VIEWS=['vSetup','vLive','vSummary','vReview','libPanel','vLab']; let viewStack=['vSetup'];
+function go(v,push=true){
+  for(const id of VIEWS) $('#'+id).hidden=id!==v;
+  if(push&&viewStack[viewStack.length-1]!==v) viewStack.push(v);
+  if(v==='vSetup'||v==='vLive'||v==='vSummary') viewStack=[v];
+  scrollTo(0,0);
+  if(v==='vReview') setTimeout(()=>{ drawTl(); },30);
+  if(v==='libPanel') renderLib();
+  if(v==='vLab') calRefresh();
+}
+function back(){ viewStack.pop(); go(viewStack[viewStack.length-1]||'vSetup',false); }
+document.addEventListener('click',e=>{ if(e.target.closest('[data-back]')) back(); });
 $('#script').textContent = SCRIPT;
 
 // engine UI
@@ -398,41 +480,47 @@ try{const k=localStorage.getItem('fk_dg');if(k)$('#dgKey').value=k;}catch(e){}
 function syncEngine(){engine=$('#engine').value;$('#engineSum').textContent=$('#engine').selectedOptions[0].textContent;const dg=engine==='deepgram';$('#dgRow').hidden=!dg;$('#dgNote').hidden=!dg;$('#langWrap').hidden=dg||engine==='local';$('#localNote').hidden=!(engine==='local'||engine==='hybrid');$('#sensRow').hidden=$('#localNote').hidden;}
 $('#engine').addEventListener('change',syncEngine); syncEngine();
 
-// settings popover (top right)
-function setOpen(on){ $('#setPanel').hidden=!on; $('#setBtn').setAttribute('aria-expanded',on); }
-$('#setBtn').addEventListener('click',()=>setOpen($('#setPanel').hidden));
-$('#setClose').addEventListener('click',()=>setOpen(false));
-addEventListener('keydown',e=>{ if(e.key==='Escape'&&!$('#setPanel').hidden){ setOpen(false); $('#setBtn').focus(); } });
-document.addEventListener('pointerdown',e=>{ if(!$('#setPanel').hidden&&!e.target.closest('#setPanel,#setBtn')) setOpen(false); });
-// prompt summary
-function syncPromptSum(){ const on=[['#aBeep','Beep'],['#aFlash','Flash'],['#aVibe','Vibrate']].filter(([s])=>$(s).checked).map(([,n])=>n); $('#promptSum').textContent=on.length?on.join(' · '):'None'; }
+// Lab tools and the sensitivity choice
+$('#setBtn').addEventListener('click',()=>go('vLab'));
+$('#sensSeg').addEventListener('click',e=>{ const b=e.target.closest('button[data-v]'); if(!b) return;
+  $('#sens').value=b.dataset.v; $('#sensSeg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); });
+// feedback summary
+function syncPromptSum(){ const v=$('#aVibe').checked, b=$('#aBeep').checked;
+  $('#fbNote').textContent=v&&b?'A gentle buzz and a soft tone when you say a filler.':v?'Get a gentle buzz when you say a filler.':b?'Hear a soft tone when you say a filler.':'No buzz or tone: fillers are only counted.';
+  $('#promptSum').textContent=''; }
 $('#promptChips').addEventListener('change',syncPromptSum); syncPromptSum();
 
-// tabs
-const NOTES={
-  live:'Talk normally. Every filler triggers the prompts you picked and adds to the count.',
-  latency:'Measures delay from saying a filler to the prompt firing.',
-  accuracy:'Measures how many scripted fillers are caught and how many false alerts fire.'
-};
-document.querySelectorAll('.tabs button').forEach(b=>b.addEventListener('click',()=>{
-  if(running) stop();
-  mode=b.dataset.mode;
-  document.querySelectorAll('.tabs button').forEach(x=>x.setAttribute('aria-selected',x===b));
-  $('#latencyPanel').hidden=mode!=='latency'; $('#accPanel').hidden=mode!=='accuracy';
-  $('#modeNote').textContent=NOTES[mode];
-}));
-$('#modeNote').textContent=NOTES.live;
+// tests (from Lab tools): run on the practice screens with their own panel
+const NOTES={ live:'', latency:'Response time test', accuracy:'Read-aloud check' };
+function setMode(m){ if(running) stop(); mode=m; $('#latencyPanel').hidden=mode!=='latency'; $('#accPanel').hidden=mode!=='accuracy';
+  $('#modeBar').hidden=mode==='live'; $('#modeNote').textContent=NOTES[mode]+': start practice to begin.'; $('#startBtn').textContent=mode==='live'?'Start practice':'Start test'; }
+$('#testLatency').addEventListener('click',()=>{ setMode('latency'); go('vSetup'); });
+$('#testAcc').addEventListener('click',()=>{ setMode('accuracy'); go('vSetup'); });
+$('#modeCancel').addEventListener('click',()=>setMode('live'));
 
 // ---------- Alerts ----------
 function prompt(){
   if($('#aBeep').checked && beepCtx){
     const o=beepCtx.createOscillator(), g=beepCtx.createGain();
-    o.frequency.value=880; g.gain.setValueAtTime(.25,beepCtx.currentTime); g.gain.exponentialRampToValueAtTime(.001,beepCtx.currentTime+.12);
-    o.connect(g).connect(beepCtx.destination); o.start(); o.stop(beepCtx.currentTime+.13);
+    o.type='sine'; o.frequency.value=660; g.gain.setValueAtTime(.0001,beepCtx.currentTime); g.gain.exponentialRampToValueAtTime(.12,beepCtx.currentTime+.02); g.gain.exponentialRampToValueAtTime(.001,beepCtx.currentTime+.25);
+    o.connect(g).connect(beepCtx.destination); o.start(); o.stop(beepCtx.currentTime+.26);     // one soft tone
   }
-  if($('#aFlash').checked){const f=$('#flash');f.classList.add('on');setTimeout(()=>f.classList.remove('on'),120);}
+  if($('#aFlash').checked && !matchMedia('(prefers-reduced-motion: reduce)').matches){const f=$('#flash');f.classList.add('on');setTimeout(()=>f.classList.remove('on'),120);}
   if($('#aVibe').checked && navigator.vibrate) navigator.vibrate(60);
 }
+// calm detection panel on the live screen; "Not an um" takes the last one back
+let catchTimer=null, lastFire=null;
+function showCatch(id){
+  const word=id==='snd'?'um':(LABEL[id]||id);
+  $('#catchTitle').textContent=`Caught ${/^[aeiou]/.test(word)?'an':'a'} ‘${word}’`;
+  $('#catchSub').textContent=$('#aVibe').checked?' One gentle buzz. Keep going.':' Keep going.';
+  $('#catch').hidden=false; clearTimeout(catchTimer); catchTimer=setTimeout(()=>{ $('#catch').hidden=true; },4500);
+}
+$('#catchUndo').addEventListener('click',()=>{ const f=lastFire; if(!f||f.undone) return; f.undone=true;
+  total=Math.max(0,total-1); perId[f.id]=Math.max(0,(perId[f.id]||1)-1); if(!perId[f.id]) delete perId[f.id];
+  const ev=events[events.length-1]; if(ev) ev.undone=true;
+  if(f.alert){ f.alert.label='not'; liveCards(); }
+  $('#catch').hidden=true; render(); });
 
 function fire(id, audioLatency){
   const now=performance.now();
@@ -443,17 +531,18 @@ function fire(id, audioLatency){
     if(tap){tap.matched=true; tapLat=now-tap.time; tap.lat=tapLat;}
   }
   events.push({t:(now-t0)/1000,id,engine,tapLat,audioLatency});
-  prompt(); render();
+  lastFire={id, alert:null}; waveHot=performance.now();
+  prompt(); if(mode==='live') showCatch(id); render();
 }
 
 // ---------- Render ----------
 function median(a){if(!a.length)return null;const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;}
 function fmtT(s){const m=Math.floor(s/60),r=Math.floor(s%60);return m+':'+String(r).padStart(2,'0');}
 function render(){
-  $('#total').textContent=total;
+  $('#total').textContent=total; $('#totalWord').textContent=total===1?'filler':'fillers';
   $('#tally').innerHTML=Object.entries(perId).map(([k,v])=>`<span>${LABEL[k]} ${v}</span>`).join('');
   const txt=(finalText+' '+interimText).trim();
-  $('#transcript').innerHTML = txt ? highlight(txt) : 'Transcript appears here.';
+  $('#transcript').hidden=!txt; $('#transcript').innerHTML = txt ? highlight(txt) : '';
   $('#transcript').scrollTop=1e9;
   const tb=$('#log tbody');
   tb.innerHTML = events.length ? events.slice().reverse().map(e=>{
@@ -485,7 +574,11 @@ function renderAcc(){
   $('#aRecall').className=pct>=90?'good':pct>=60?'meh':'bad';
   $('#aExtra').textContent=total||running?extra:'–';
 }
-function tick(){const s=(performance.now()-t0)/1000;$('#elapsed').textContent=`${fmtT(s)} · ${(s>5?total/(s/60):0).toFixed(1)} fillers/min`;}
+// active practice time, not counting pauses
+let paused=false, pausedAt=0, pausedMs=0, autoPause=false;
+const activeS=()=>((paused?pausedAt:performance.now())-t0-pausedMs)/1000;
+function tick(){ const s=Math.max(0,activeS()), m=Math.floor(s/60), r=Math.floor(s%60);
+  $('#elapsed').textContent=String(m).padStart(2,'0')+':'+String(r).padStart(2,'0'); $('#elapsed').setAttribute('aria-label',`Elapsed ${m} minutes ${r} seconds`); }
 
 // ---------- Browser engine ----------
 function startBrowser(){
@@ -504,7 +597,7 @@ function startBrowser(){
       render();
     };
     rec.onerror=e=>{ if(e.error==='not-allowed'||e.error==='service-not-allowed'){showErr('Microphone or speech access was blocked. Allow it in the browser and try again.');stop();} };
-    rec.onend=()=>{ if(running && (engine==='browser'||engine==='hybrid') && gen===recGen) setTimeout(go,50); };
+    rec.onend=()=>{ if(running && !paused && (engine==='browser'||engine==='hybrid') && gen===recGen) setTimeout(go,50); };
     rec.start();
   };
   go();
@@ -540,10 +633,11 @@ async function startDeepgram(){
   const src=ctx.createMediaStreamSource(stream); proc=ctx.createScriptProcessor(size,1,1);
   const mute=ctx.createGain(); mute.gain.value=0;
   proc.onaudioprocess=e=>{
-    if(!ws||ws.readyState!==1) return;
+    if(!ws||ws.readyState!==1||paused) return;
     const f=e.inputBuffer.getChannelData(0), b=new Int16Array(f.length);
     for(let i=0;i<f.length;i++){const s=Math.max(-1,Math.min(1,f[i]));b[i]=s<0?s*0x8000:s*0x7fff;}
     if(!dgT0) dgT0=performance.now();
+    let e2=0; for(let i=0;i<f.length;i++) e2+=f[i]*f[i]; waveLevel(Math.sqrt(e2/f.length));
     ws.send(b.buffer);
   };
   src.connect(proc); proc.connect(mute); mute.connect(ctx.destination);
@@ -653,11 +747,14 @@ async function startLocal(){
   const ratio=lctx.sampleRate/16000; let carry=0;
   const preset=(document.getElementById('sens')||{}).value||'balanced', cfg=calFor(m, preset);
   const used=cfg||m.presets[preset];
-  session = $('#keepRec').checked ? {id:Date.now(), date:new Date().toISOString(), profile:who(), model:m.key, preset, cfg:used, personal:!!cfg, chunks:[], n:0, probs:[], alerts:[], missed:[], done:false} : null;
-  const det=makeLocalDetector(m, preset, ()=>{ fire('snd', null); if(session) session.alerts.push({t:session.probs.length/100, label:null}); },
-                              p=>{ if(session) session.probs.push(p); }, cfg);
+  session = $('#keepRec').checked ? {id:Date.now(), date:new Date().toISOString(), profile:who(), model:m.key, preset, cfg:used, personal:!!cfg, chunks:[], n:0, probs:[], alerts:[], missed:[], spans:{}, off:{}, done:false} : null;
+  const det=makeLocalDetector(m, preset, ()=>{ fire('snd', null);
+      if(session){ const al={t:session.probs.length/100, label:null}; session.alerts.push(al); if(lastFire) lastFire.alert=al; liveCards(true); } },
+    p=>{ if(session) session.probs.push(p); }, cfg);
   if(cfg) $('#status').textContent+=' · your calibration';
-  const feed=a=>{ det.push(a); if(session && session.n<MAX_REC_S*16000){ const q=new Int16Array(a.length); for(let i=0;i<a.length;i++) q[i]=Math.max(-32768,Math.min(32767,Math.round(a[i]*32767))); session.chunks.push(q); session.n+=a.length; } };
+  const feed=a=>{ if(paused) return;                                     // paused: not listening, not recording
+    det.push(a); let e=0; for(let i=0;i<a.length;i++) e+=a[i]*a[i]; waveLevel(Math.sqrt(e/Math.max(1,a.length)));
+    if(session && session.n<MAX_REC_S*16000){ const q=new Int16Array(a.length); for(let i=0;i<a.length;i++) q[i]=Math.max(-32768,Math.min(32767,Math.round(a[i]*32767))); session.chunks.push(q); session.n+=a.length; } };
   const src=lctx.createMediaStreamSource(lstream); lproc=lctx.createScriptProcessor(2048,1,1);
   const mute=lctx.createGain(); mute.gain.value=0;
   lproc.onaudioprocess=e=>{
@@ -696,17 +793,17 @@ async function finishSession(){
   const s=session; session=null; if(!s || s.probs.length<200) return;           // ignore recordings under 2 s
   const a=new Int16Array(s.n); let o=0; for(const c of s.chunks){ a.set(c,o); o+=c.length; }
   const meta={id:s.id, date:s.date, profile:s.profile, model:s.model, preset:s.preset, cfg:s.cfg, personal:s.personal, probs:new Float32Array(s.probs),
-              dur:s.probs.length/100, alerts:s.alerts, missed:[], done:false};
+              dur:s.probs.length/100, alerts:s.alerts, missed:s.missed||[], spans:s.spans||{}, off:s.off||{}, done:false};
   try{ await dbPutMeta(meta); await tx('audio','readwrite',st=>st.put(a,s.id)); }
   catch(e){ showErr('Could not keep the recording for review (browser storage is full or blocked).'); return; }
-  await refreshSessions(s.id); $('#reviewFold').open=true;
+  await refreshSessions(s.id); lastSavedId=s.id;
 }
 const sessLabel=m=>`${m.name?m.name+' · ':''}${new Date(m.date).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'})} · ${fmtT(m.dur)} · ${m.alerts.length} alerts${m.done?' · ✓ marked':''}`;
 async function refreshSessions(selectId){
   const all=await tx('meta','readonly',s=>s.getAll()).catch(()=>[])||[], first=profs().list[0];
   for(const m of all) if(!m.profile){ m.profile=first; dbPutMeta(m).catch(()=>{}); }   // recordings made before profiles existed
   metas=all.filter(m=>m.profile===who()).sort((a,b)=>b.id-a.id); $('#whoName').textContent=who(); updateLibBtn(); libSoon();
-  $('#reviewPanel').hidden=!metas.length; if(!metas.length){ cur=null; return; }
+  $('#reviewPanel').hidden=!metas.length; $('#revEmpty').hidden=!!metas.length; if(!metas.length){ cur=null; return; }
   $('#sessSel').replaceChildren(...metas.map(m=>{ const o=document.createElement('option'); o.value=m.id; o.textContent=sessLabel(m); return o; }));
   const id=selectId ?? (cur&&metas.some(m=>m.id===cur.id)?cur.id:metas[0].id);
   $('#sessSel').value=String(id); await openSession(id); calRefresh();
@@ -727,7 +824,7 @@ function renderReview(){
   $('#alist').innerHTML=items.length ? items.map(it=>{ const t=fmtT2(it.t), play=`<button class="ibtn" data-play="${it.t}" aria-label="Play around ${t}">▶</button>`;
     if(it.kind==='miss') return `<div class="arow"><span class="t">${t}</span>${play}<span class="what" style="color:var(--miss)">▲ Missed um</span><button class="ibtn" data-delmiss="${it.i}" aria-label="Remove missed um at ${t}">Remove</button></div>`;
     const l=cur.alerts[it.i].label;
-    return `<div class="arow"><span class="t">${t}</span>${play}<span class="what"></span><button class="ibtn yes" data-mark="${it.i}" data-v="real" aria-pressed="${l==='real'}" aria-label="Real um at ${t}">✓ Real</button><button class="ibtn no" data-mark="${it.i}" data-v="not" aria-pressed="${l==='not'}" aria-label="Not an um at ${t}">✕ Not</button></div>`;
+    return `<div class="arow"><span class="t">${t}</span>${play}<span class="what"></span><button class="ibtn yes" data-mark="${it.i}" data-v="real" aria-pressed="${l==='real'}" aria-label="Filler at ${t}">✓ Filler</button><button class="ibtn no" data-mark="${it.i}" data-v="not" aria-pressed="${l==='not'}" aria-label="Not a filler at ${t}">Not one</button></div>`;
   }).join('') : '<p class="note">No alerts in this recording. Add any ums it missed while you listen.</p>';
   const real=cur.alerts.filter(a=>a.label==='real').length, not=cur.alerts.filter(a=>a.label==='not').length;
   $('#revStats').textContent=`${cur.alerts.length} alerts: ${real} real, ${not} not, ${cur.alerts.length-real-not} unmarked · ${cur.missed.length} missed added`;
@@ -738,7 +835,7 @@ const cssv=n=>getComputedStyle(document.documentElement).getPropertyValue(n).tri
 let tv=null, curPcm=null, curPeaks=null, peakMax=1;
 function setView(a,b){
   if(!cur) return; const d=cur.dur, span=Math.max(Math.min(d,1),Math.min(d,b-a)); a=Math.max(0,Math.min(a,d-span)); tv=[a,a+span];
-  $('#zoomInfo').textContent=span>=d-0.01?'Whole recording':`${fmtT2(a)} – ${fmtT2(a+span)} (${span<10?span.toFixed(1):Math.round(span)} s)`; drawTl();
+  $('#zoomInfo').textContent=span>=d-0.01?'':`${fmtT2(a)} – ${fmtT2(a+span)} (${span<10?span.toFixed(1):Math.round(span)} s)`; drawTl();
 }
 function zoomAt(t,f){ const [a,b]=tv; setView(t-(t-a)*f, t-(t-a)*f+(b-a)*f); }
 function drawTl(){
@@ -798,7 +895,6 @@ $('#missBtn').addEventListener('click',()=>{ if(!cur) return; const p=$('#player
   const t=Math.max(0,(p.currentTime||0)-(p.paused?0:0.3)); cur.missed.push(Math.round(t*100)/100); saveCur(); renderReview(); });
 $('#sessName').addEventListener('change',e=>{ if(!cur) return; cur.name=e.target.value.trim().slice(0,40); e.target.value=cur.name; saveCur();
   const o=[...$('#sessSel').options].find(o=>+o.value===cur.id); if(o) o.textContent=sessLabel(cur); libSoon(); });
-$('#reviewFold').addEventListener('toggle',()=>{ if($('#reviewFold').open) drawTl(); });
 $('#revDone').addEventListener('change',e=>{ if(!cur) return; cur.done=e.target.checked; saveCur(); refreshSessions(cur.id); });
 $('#sessSel').addEventListener('change',e=>openSession(e.target.value));
 $('#player').addEventListener('play',()=>{ const loop=()=>{ const p=$('#player'), t=p.currentTime||0;
@@ -824,7 +920,16 @@ function saveProfs(p){ try{ localStorage.setItem('fk_profiles',JSON.stringify(p)
 const who=()=>profs().current, calKey=()=>'fk_cal:'+who();
 try{ const old=localStorage.getItem('fk_cal'); if(old!==null){ const k='fk_cal:'+profs().list[0]; if(localStorage.getItem(k)===null) localStorage.setItem(k,old); localStorage.removeItem('fk_cal'); } }catch(e){}
 function renderWho(){ const p=profs(), s=$('#who');
-  s.replaceChildren(...p.list.map(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=n; return o; })); s.value=p.current; $('#whoDel').disabled=p.list.length<2; }
+  s.replaceChildren(...p.list.map(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=n; return o; })); s.value=p.current; $('#whoDel').disabled=p.list.length<2;
+  $('#whoAv').textContent=(p.current[0]||'?').toUpperCase(); $('#liveWho').textContent=$('#sumWho').textContent=p.current;
+  const pills=p.list.map(n=>{ const b=document.createElement('button'); b.setAttribute('aria-pressed',n===p.current); b.dataset.who=n;
+      const av=document.createElement('span'); av.textContent=(n[0]||'?').toUpperCase(); av.style.cssText='flex:none;width:26px;height:26px;border-radius:13px;display:grid;place-items:center;font-size:12px;background:'+(n===p.current?'var(--bg);color:var(--fg)':'var(--sage);color:#173D32');
+      const nm=document.createElement('span'); nm.textContent=n+(n===p.current?' ✓':''); b.append(av,nm); return b; });
+  const add=document.createElement('button'); add.className='add'; add.textContent='+ Add'; add.setAttribute('aria-label','Add a person'); add.dataset.add='1';
+  $('#whoPills').replaceChildren(...pills,add); }
+$('#whoPills').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b) return;
+  if(b.dataset.add) return $('#whoAdd').click();
+  const p=profs(); if(running) return showErr('End practice before changing who is talking.'); p.current=b.dataset.who; saveProfs(p); switchWho(); });
 function switchWho(){ cur=null; renderWho(); refreshSessions(); }
 $('#who').addEventListener('change',e=>{ const p=profs();
   if(running){ e.target.value=p.current; return showErr('Stop listening before changing who is talking.'); }
@@ -916,8 +1021,9 @@ function libMove(e){ if(!libDrag) return; const {c,it,edge}=libDrag, r=c.getBoun
 $('#libList').addEventListener('pointermove',libMove);
 const libEnd=()=>{ if(!libDrag) return; const it=libDrag.it; libDrag=null; libSave(it); const el=[...$('#libList').querySelectorAll('.clip')].find(x=>libMap.get(x.dataset.id)===it); if(el) drawClip(el); };
 $('#libList').addEventListener('pointerup',libEnd); $('#libList').addEventListener('pointercancel',libEnd);
-$('#libBtn').addEventListener('click',()=>{ $('#libPanel').hidden=false; renderLib(); $('#libPanel').scrollIntoView({behavior:'smooth',block:'start'}); });
-$('#libClose').addEventListener('click',()=>{ $('#libPanel').hidden=true; try{ libSrc&&libSrc.stop(); }catch(e){} });
+$('#libBtn').addEventListener('click',()=>go('libPanel'));
+$('#libClose').addEventListener('click',()=>{ try{ libSrc&&libSrc.stop(); }catch(e){} back(); });
+$('#revBtn').addEventListener('click',()=>go('vReview'));
 
 function getCal(){ try{ return JSON.parse(localStorage.getItem(calKey())||'null'); }catch(e){ return null; } }
 function calFor(m,preset){ const c=getCal(); return c&&c.use&&c.model===m.key&&c.presets[preset]?c.presets[preset]:null; }
@@ -957,18 +1063,25 @@ $('#useCal').addEventListener('change',e=>{ const c=getCal(); if(!c) return; c.u
 // ---------- Start / stop ----------
 function showErr(m){$('#err').textContent=m;$('#err').hidden=false;}
 function reset(){total=0;perId={};events=[];taps=[];finalText='';interimText='';seenWS={};dgSeen={};dgT0=0;}
+const micMsg=e=>e&&e.name==='NotAllowedError'?'Microphone access is turned off. Allow the microphone for this site in your browser settings, then try again.'
+  : e&&(e.name==='NotFoundError'||e.name==='NotReadableError')?'Microphone unavailable. Another app may be using it, or none is connected. Check, then try again.'
+  : (e&&e.message)||String(e);
 async function start(){
   $('#err').hidden=true; reset(); engine=$('#engine').value;
   try{ beepCtx=beepCtx||new (window.AudioContext||window.webkitAudioContext)(); await beepCtx.resume(); }catch(e){}
   try{ wakeLock=await navigator.wakeLock?.request('screen'); }catch(e){}
-  t0=performance.now(); running=true;
-  $('#startBtn').textContent='Stop'; $('#startBtn').classList.add('live'); $('#status').textContent='Listening · '+ENGINE_NAME[engine]+' · '+who(); $('#status').classList.add('live');
-  timer=setInterval(tick,500); render();
+  t0=performance.now(); running=true; paused=false; pausedMs=0; autoPause=false; waveHist=[]; cardOpen=new Set(); lastFire=null;
+  const snd=engine==='local'||engine==='hybrid';
+  $('#status').textContent=(mode==='live'?'Practice session':NOTES[mode])+' · Listening'; $('#status').classList.remove('paused');
+  $('#pauseBtn').textContent='Pause'; $('#pauseBtn').hidden=false; $('#endBtn').textContent='End practice'; $('#catch').hidden=true;
+  $('#liveWave').hidden=engine==='browser'; $('#calLiveRow').hidden=!(snd&&$('#keepRec').checked&&mode==='live');
+  go('vLive'); tick(); timer=setInterval(tick,500); render(); liveCards();
   try{ if(engine==='deepgram') await startDeepgram(); else if(engine==='local') await startLocal(); else if(engine==='hybrid'){ await startLocal(); startBrowser(); } else startBrowser(); }
-  catch(e){ showErr(e.message||String(e)); stop(); }
+  catch(e){ stop(true); showErr(micMsg(e)); }
+  liveCards();
 }
-function stop(){
-  running=false; clearInterval(timer);
+function stop(failed){
+  const wasRunning=running; running=false; clearInterval(timer); if(paused){ pausedMs+=performance.now()-pausedAt; paused=false; }
   try{rec&&rec.stop();}catch(e){} rec=null;
   try{ if(ws&&ws.readyState===1){ws.send(JSON.stringify({type:'CloseStream'}));} ws&&setTimeout(()=>{try{ws.close()}catch(e){}},1500);}catch(e){}
   try{proc&&proc.disconnect();}catch(e){} proc=null;
@@ -976,11 +1089,126 @@ function stop(){
   try{ctx&&ctx.close();}catch(e){} ctx=null;
   try{stream&&stream.getTracks().forEach(t=>t.stop());}catch(e){} stream=null;
   try{wakeLock&&wakeLock.release();}catch(e){} wakeLock=null;
-  $('#startBtn').textContent='Start listening'; $('#startBtn').classList.remove('live'); $('#status').textContent='Stopped'; $('#status').classList.remove('live');
   render();
+  if(failed||!wasRunning){ go('vSetup'); return; }
+  if(mode==='live'){ buildSummary(); go('vSummary'); }
+  else { $('#status').textContent=NOTES[mode]+' · Finished'; $('#pauseBtn').hidden=true; $('#endBtn').textContent='Done'; }
 }
-$('#startBtn').addEventListener('click',()=>running?stop():start());
-$('#tapBtn').addEventListener('pointerdown',()=>{ if(!running){showErr('Tap Start listening first.');return;} taps.push({time:performance.now(),matched:false,lat:null}); render(); });
+function setPaused(on){
+  if(!running||paused===on) return; paused=on;
+  if(on){ pausedAt=performance.now(); try{rec&&rec.stop();}catch(e){} }
+  else { pausedMs+=performance.now()-pausedAt; if(engine==='browser'||engine==='hybrid'){ try{ startBrowser(); }catch(e){} } }
+  $('#pauseBtn').textContent=on?'Resume':'Pause';
+  $('#status').textContent=(mode==='live'?'Practice session':NOTES[mode])+(on?' · Paused':' · Listening'); $('#status').classList.toggle('paused',on); tick();
+}
+$('#startBtn').addEventListener('click',()=>{ if(!running) start(); });
+$('#pauseBtn').addEventListener('click',()=>{ autoPause=false; setPaused(!paused); });
+$('#endBtn').addEventListener('click',()=>{ if(running) stop(); else { setMode('live'); go('vSetup'); } });
+$('#tapBtn').addEventListener('pointerdown',()=>{ if(!running){showErr('Start the test first.');return;} taps.push({time:performance.now(),matched:false,lat:null}); render(); });
+
+// ---------- Live: calm waveform ----------
+let waveHot=0, waveHist=[], lastSavedId=null, cardOpen=new Set();
+function waveLevel(rms){ waveHist.push({v:rms, hot:performance.now()-waveHot<800}); if(waveHist.length>80) waveHist.shift(); drawLive(); }
+function drawLive(){
+  const c=$('#liveWave'); if($('#vLive').hidden||!c.clientWidth) return; const dpr=devicePixelRatio||1, W=c.clientWidth, H=c.clientHeight;
+  if(c.width!==Math.round(W*dpr)){ c.width=Math.round(W*dpr); c.height=Math.round(H*dpr); }
+  const g=c.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H);
+  const n=Math.floor(W/9), hs=waveHist.slice(-n), x0=(W-n*9)/2+(n-hs.length)*9;
+  hs.forEach((s,i)=>{ const h=Math.max(4,Math.min(1,Math.pow(s.v*8,0.6))*(H-8)); g.fillStyle=s.hot?cssv('--accent-hi'):cssv('--line');
+    const x=x0+i*9, y=(H-h)/2; g.beginPath(); g.roundRect?g.roundRect(x,y,5,h,2.5):g.rect(x,y,5,h); g.fill(); });
+}
+
+// ---------- Live: calibrate as I go (each um becomes a card you can trim and confirm while you speak) ----------
+function sessSlice(s,a,b){ const i0=Math.max(0,Math.floor(a*16000)), i1=Math.min(s.n,Math.ceil(b*16000)), out=new Int16Array(Math.max(0,i1-i0)); let o=0;
+  for(const c of s.chunks){ const e=o+c.length; if(e>i0&&o<i1){ const f=Math.max(i0,o), t=Math.min(i1,e); out.set(c.subarray(f-o,t-o),f-i0); } o=e; if(o>=i1) break; } return out; }
+function liveItems(){ const s=session; if(!s) return [];
+  return [...s.alerts.map((a,i)=>({kind:'a',i,t:a.t,key:'a'+i,label:a.label})), ...s.missed.map(t=>({kind:'m',t,key:missKey(t),label:s.off[missKey(t)]?'not':'real'}))].sort((x,y)=>x.t-y.t); }
+function uncount(al,yes){ if(!al) return; if(!yes&&!al.uncounted){ al.uncounted=true; total=Math.max(0,total-1); perId.snd=Math.max(0,(perId.snd||1)-1); }
+  if(yes&&al.uncounted){ al.uncounted=false; total++; perId.snd=(perId.snd||0)+1; } render(); }
+function liveCards(scroll){
+  const on=$('#calLive').checked&&!!session&&mode==='live'&&!$('#calLiveRow').hidden;
+  $('#calLiveRow').classList.toggle('on',$('#calLive').checked); $('#calLiveState').textContent=$('#calLive').checked?'· On':'· Off';
+  $('#feedWrap').hidden=!on; $('#liveWave').style.display=on&&liveItems().length?'none':''; if(!on) return;
+  const s=session, items=liveItems();
+  $('#feed').innerHTML=items.length?items.map(it=>{ const sp=s.spans[it.key]||estSpan(s,it.t), len=(sp[1]-sp[0]).toFixed(2)+' s', t=fmtT2(it.t);
+    const what=it.kind==='m'?'added by you':it.label==='real'?'confirmed':it.label==='not'?'not an um':'not checked yet';
+    if(it.label===null||cardOpen.has(it.key)) return `<div class="lc${it.label===null?' new':''}" data-k="${it.key}">
+      <div class="hd"><span class="t">${t}</span><span class="what">um · ${what} · <b data-len>${len}</b></span><button class="ibtn" data-act="play" aria-label="Play this um">▶</button></div>
+      <canvas aria-label="Close-up of the um at ${t}: drag the edges to trim"></canvas>
+      <div class="two"><button class="ibtn primary" data-act="yes">✓ Yes, an um</button><button class="ibtn" data-act="no">Not an um</button></div></div>`;
+    const not=it.label==='not';
+    return `<div class="lc done${not?' not':''}" data-k="${it.key}" data-act="open" role="button" tabindex="0" aria-label="${t}, ${what}. Open to change">
+      <span class="t" style="font:600 13px var(--body);color:var(--fg)">${t}</span><span class="what">um · ${what} · ${len}</span><span class="tag ${not?'no':'yes'}">${not?'✕ Not one':'✓ Um'}</span></div>`; }).join('')
+    : '<p class="note">Ums appear here as you speak. Check each one, or add one it missed.</p>';
+  for(const el of $('#feed').querySelectorAll('canvas')) drawLiveCard(el.closest('.lc'));
+  if(scroll) $('#feed').scrollTop=1e9;
+}
+function liveItem(key){ return liveItems().find(x=>x.key===key); }
+function drawLiveCard(el,keep){
+  const s=session; if(!s) return; const it=liveItem(el.dataset.k), c=el.querySelector('canvas'); if(!it||!c) return;
+  const sp=s.spans[it.key]||estSpan(s,it.t), dur=s.n/16000;
+  if(!keep||!el._win) el._win=[Math.max(0,sp[0]-0.6),Math.min(dur,sp[1]+0.6)];
+  const [w0,w1]=el._win, pcm=sessSlice(s,w0,w1), dpr=devicePixelRatio||1, W=c.clientWidth, H=c.clientHeight; if(!W) return;
+  if(c.width!==Math.round(W*dpr)){ c.width=Math.round(W*dpr); c.height=Math.round(H*dpr); }
+  const g=c.getContext('2d'); g.setTransform(dpr,0,0,dpr,0,0); g.clearRect(0,0,W,H); const x=t=>(t-w0)/(w1-w0)*W;
+  g.fillStyle=cssv('--accent-hi'); g.globalAlpha=0.16; g.fillRect(x(sp[0]),0,x(sp[1])-x(sp[0]),H); g.globalAlpha=1;
+  let pk=1; for(let i=0;i<pcm.length;i++){ const v=Math.abs(pcm[i]); if(v>pk) pk=v; }
+  const per=Math.max(1,Math.floor(pcm.length/W)); g.fillStyle=cssv('--muted'); g.globalAlpha=0.45;
+  for(let px=0;px<W;px++){ let mx=0; for(let i=px*per;i<(px+1)*per&&i<pcm.length;i++){ const v=Math.abs(pcm[i]); if(v>mx) mx=v; } const h=Math.max(1,mx/pk*(H/2-4)); g.fillRect(px,H/2-h,1,2*h); }
+  g.globalAlpha=1; g.fillStyle=cssv('--fg'); for(const t of sp){ const X=x(t); g.fillRect(X-2,0,4,H); }
+}
+function playPcm(pcm){
+  try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); actx.resume(); }catch(e){ return; } if(!pcm.length) return;
+  const buf=actx.createBuffer(1,pcm.length,16000), ch=buf.getChannelData(0); for(let i=0;i<ch.length;i++) ch[i]=pcm[i]/32768;
+  try{ libSrc&&libSrc.stop(); }catch(e){} libSrc=actx.createBufferSource(); libSrc.buffer=buf; libSrc.connect(actx.destination);
+  if(running&&!paused){ autoPause=true; setPaused(true); }                // don't let the playback be heard as speech
+  libSrc.onended=()=>{ if(autoPause&&running){ autoPause=false; setPaused(false); } }; libSrc.start();
+}
+$('#feed').addEventListener('click',e=>{ const b=e.target.closest('[data-act]'), el=e.target.closest('.lc'); if(!b||!el||!session) return;
+  const s=session, it=liveItem(el.dataset.k); if(!it) return; const act=b.dataset.act;
+  if(act==='open'){ cardOpen.add(it.key); return liveCards(); }
+  if(act==='play'){ const sp=s.spans[it.key]||estSpan(s,it.t); return playPcm(sessSlice(s,sp[0],sp[1])); }
+  if(it.kind==='a'){ const al=s.alerts[it.i]; al.label=act==='yes'?'real':'not'; uncount(al,act==='yes'); }
+  else { if(act==='yes') delete s.off[it.key]; else if(!s.off[it.key]){ s.off[it.key]=true; total=Math.max(0,total-1); perId.snd=Math.max(0,(perId.snd||1)-1); render(); } }
+  cardOpen.delete(it.key); liveCards(); });
+$('#feed').addEventListener('keydown',e=>{ if((e.key==='Enter'||e.key===' ')&&e.target.matches('.lc.done')){ e.preventDefault(); e.target.click(); } });
+let liveDrag=null;
+$('#feed').addEventListener('pointerdown',e=>{ const c=e.target.closest('.lc canvas'); if(!c||!session) return; const el=c.closest('.lc'), it=liveItem(el.dataset.k); if(!it||!el._win) return;
+  const s=session, sp=(s.spans[it.key]||estSpan(s,it.t)).slice(), r=c.getBoundingClientRect(), t=el._win[0]+(e.clientX-r.left)/r.width*(el._win[1]-el._win[0]);
+  liveDrag={el,c,key:it.key,sp,edge:Math.abs(t-sp[0])<=Math.abs(t-sp[1])?0:1}; try{ c.setPointerCapture(e.pointerId); }catch(err){} });
+$('#feed').addEventListener('pointermove',e=>{ if(!liveDrag) return; const {el,c,sp,edge}=liveDrag, r=c.getBoundingClientRect(), w=el._win;
+  const t=Math.round((w[0]+Math.min(1,Math.max(0,(e.clientX-r.left)/r.width))*(w[1]-w[0]))*100)/100;
+  sp[edge]=edge?Math.max(t,sp[0]+0.08):Math.min(t,sp[1]-0.08); session.spans[liveDrag.key]=sp.slice();
+  const L=el.querySelector('[data-len]'); if(L) L.textContent=(sp[1]-sp[0]).toFixed(2)+' s'; drawLiveCard(el,true); });
+const liveDragEnd=()=>{ liveDrag=null; };
+$('#feed').addEventListener('pointerup',liveDragEnd); $('#feed').addEventListener('pointercancel',liveDragEnd);
+$('#liveMiss').addEventListener('click',()=>{ if(!session||!running) return; const t=Math.max(0,Math.round((session.n/16000-0.9)*100)/100);
+  session.missed.push(t); total++; perId.snd=(perId.snd||0)+1; cardOpen.add(missKey(t)); render(); liveCards(true); });
+$('#calLive').addEventListener('change',()=>liveCards());
+
+// ---------- Summary: this session and this person's last 7 days (fillers per minute) ----------
+const histKey=()=>'fk_hist:'+who();
+function getHist(){ try{ return JSON.parse(localStorage.getItem(histKey())||'[]'); }catch(e){ return []; } }
+function buildSummary(){
+  const min=Math.max(0,activeS())/60, n=total;
+  if(min>=0.25){ const h=getHist(); h.push({d:new Date().toISOString(),min:+min.toFixed(2),n,per:{...perId}}); while(h.length>300) h.shift(); try{ localStorage.setItem(histKey(),JSON.stringify(h)); }catch(e){} }
+  const mins=Math.round(min), dur=min<1?`${Math.max(1,Math.round(min*60))} seconds`:`${mins} minute${mins===1?'':'s'}`;
+  $('#sumBig').textContent=`${n} filler${n===1?'':'s'} in ${dur}`;
+  $('#sumRate').textContent=min>=0.25?`That's ${(n/min).toFixed(1)} per minute this session.`:'A short session. A few minutes gives a steadier picture.';
+  const h=getHist(), days=[]; for(let k=6;k>=0;k--){ const d=new Date(); d.setHours(0,0,0,0); d.setDate(d.getDate()-k); days.push(d); }
+  const vals=days.map(d=>{ const e=new Date(d); e.setDate(e.getDate()+1); const s=h.filter(x=>{ const t=new Date(x.d); return t>=d&&t<e; });
+    const m=s.reduce((a,x)=>a+x.min,0); return m>0?s.reduce((a,x)=>a+x.n,0)/m:null; });
+  const nWeek=h.filter(x=>new Date(x.d)>=days[0]).length, mx=Math.max(0.1,...vals.filter(v=>v!=null));
+  $('#chartWrap').hidden=nWeek<2; $('#chartN').textContent=`${nWeek} sessions`;
+  const name=(d,i)=>i===6?'Today':d.toLocaleDateString([],{weekday:'short'});
+  $('#chart').innerHTML=vals.map((v,i)=>`<div class="c${i===6?' today':''}"><span>${v==null?'–':v.toFixed(1)}</span><span class="b" style="height:${v==null?2:Math.max(4,Math.round(v/mx*110))}px${v==null?';background:var(--line)':''}"></span></div>`).join('');
+  $('#chart').setAttribute('aria-label','Fillers per minute, last 7 days: '+vals.map((v,i)=>name(days[i],i)+' '+(v==null?'no session':v.toFixed(1))).join(', '));
+  $('#chartx').innerHTML=days.map((d,i)=>`<span class="${i===6?'today':''}">${name(d,i)}</span>`).join('');
+  const rows=Object.entries(perId).filter(([,v])=>v>0).map(([k,v])=>`<div><span>${k==='snd'?'um / uh':LABEL[k]}</span><b>${v}</b></div>`);
+  $('#sumBrk').innerHTML=rows.length?rows.join(''):'<div><span>None this time</span><b>0</b></div>';
+}
+$('#againBtn').addEventListener('click',()=>go('vSetup'));
+$('#sumReview').addEventListener('click',async()=>{ go('vReview'); if(lastSavedId) await refreshSessions(lastSavedId); setTimeout(drawTl,30); });
 
 // ---------- Copy ----------
 $('#copyBtn').addEventListener('click',()=>{
