@@ -29,7 +29,7 @@ body{background:var(--bg);color:var(--text);font:16px/1.5 var(--body);-webkit-te
 .masthead{max-width:560px;margin:0 auto;padding:max(14px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) 0 max(20px,env(safe-area-inset-left))}
 .wordmark.big{font:700 clamp(30px,9.2vw,54px)/1.05 var(--body);letter-spacing:-.02em;white-space:nowrap;padding-bottom:12px;border-bottom:1px solid var(--rule)}
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--bg);border-top:1px solid var(--line);padding:0 max(6px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(6px,env(safe-area-inset-left))}
-.tabin{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(6,minmax(0,1fr))}
+.tabin{max-width:560px;margin:0 auto;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}
 .tabbar button{min-height:62px;padding:6px 2px 4px;border:0;background:transparent;color:var(--muted);font:500 11px/1.1 var(--body);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;touch-action:manipulation;position:relative}
 .tabbar svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
 .tabbar button[aria-current=page]{color:var(--fg);font-weight:700}
@@ -65,6 +65,23 @@ select,input[type=password],input[type=text]{font:500 16px var(--body);height:46
 .person{align-self:flex-start;display:flex;flex-direction:row;align-items:center;gap:8px;height:44px;padding:0 6px 0 6px;border-radius:22px;border:1px solid var(--line);background:var(--surface);color:var(--fg);font:500 14px var(--body)}
 .person .av{flex:none;width:32px;height:32px;border-radius:16px;background:var(--fg);color:var(--bg);display:grid;place-items:center;font-weight:700;font-size:14px}
 .person select{height:36px;border:0;background:transparent;padding:0 8px;font-weight:600}
+.person.wide{align-self:stretch;padding-right:4px}
+.person.wide select{margin-left:auto;font-size:15px;max-width:55%}
+.frow{display:flex;align-items:center;gap:10px}
+.fchips{flex:1 1 auto;min-width:0;display:flex;gap:6px;overflow-x:auto;scrollbar-width:none;-webkit-overflow-scrolling:touch}
+.fchips::-webkit-scrollbar{display:none}
+.fchip{flex:none;white-space:nowrap;padding:6px 12px;border-radius:16px;background:var(--peach);border:1px solid var(--peach-line);color:var(--accent-text);font:600 13px var(--body)}
+.alertrow{display:flex;align-items:center;gap:10px}
+.circ{position:relative;flex:none;width:48px;height:48px;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.circ input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.circ span{display:grid;place-items:center;width:48px;height:48px;border-radius:50%;border:1.5px solid var(--line);background:var(--surface);color:var(--muted);transition:background .15s,color .15s}
+.circ svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.7;stroke-linejoin:round;stroke-linecap:round}
+.circ input:checked+span{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.circ input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.alertrow .switch{flex:1 1 auto;min-width:0;min-height:48px;padding:0 4px 0 14px;font-size:13.5px;border:1.5px solid var(--line)}
+.alertrow .switch.on{background:var(--accent);border-color:var(--accent);color:var(--accent-ink)}
+.alertrow .switch input{margin-right:8px}
+.alertrow .switch.on input{accent-color:var(--accent-ink)}
 /* pills: equal size, terracotta with tick when on */
 .pills{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:8px}
 .pill{position:relative;display:block;cursor:pointer;user-select:none;-webkit-tap-highlight-color:transparent}
@@ -92,7 +109,7 @@ select,input[type=password],input[type=text]{font:500 16px var(--body);height:46
 .status.paused{background:var(--peach)}
 .timerwrap{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
 .timerwrap .note{font-size:15px}
-.timer{font:400 clamp(84px,28vw,128px)/1 var(--display);color:var(--fg);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.timer{font:400 clamp(67px,22.4vw,102px)/1 var(--display);color:var(--fg);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
 .countbox{align-self:center;min-width:min(240px,70%);display:flex;flex-direction:column;align-items:center;padding:14px 28px 12px;border-radius:28px;border:2px solid var(--line);background:var(--surface);color:var(--fg);
   transition:background .6s,color .6s,border-color .6s}
 .countbox .n{font:400 clamp(64px,20vw,96px)/1 var(--display);font-variant-numeric:tabular-nums}
@@ -230,7 +247,6 @@ th{font:600 12px var(--body);color:var(--muted)}
 
 <nav class="tabbar" aria-label="Sections">
   <div class="tabin">
-    <button data-go="vSetup"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg>Home</button>
     <button data-go="vLive"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>Practice</button>
     <button data-go="vSummary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/></svg>Summary</button>
     <button data-go="vCal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Calibrate</button>
@@ -238,51 +254,36 @@ th{font:600 12px var(--body);color:var(--muted)}
   </div>
 </nav>
 
-<!-- 1 · Practice setup -->
-<main class="screen" id="vSetup">
-
-  <label class="person"><span class="av" id="whoAv" aria-hidden="true">M</span><span class="sr" style="font-weight:500">Practising as</span>
+<!-- 1 · Practice: set up and practise on one screen -->
+<main class="screen" id="vLive">
+  <label class="person wide"><span class="av" id="whoAv" aria-hidden="true">M</span><span style="font-weight:500">Who's practising</span>
     <select id="who" aria-label="Who's practising"></select></label>
-
-  <div>
-    <h1>Make every word count.</h1>
-    <p class="lead">Choose the filler words you want to catch, then set your feedback preference.</p>
-  </div>
 
   <div class="modebar" id="modeBar" hidden><span id="modeNote"></span><button class="ibtn" id="modeCancel">Back to practice</button></div>
 
-  <section class="stack" aria-labelledby="hFill">
+  <div class="bar" style="min-height:0">
+    <span class="status" id="status" role="status">Ready to practise</span>
+    <span class="note" id="liveWho" hidden></span>
+  </div>
+  <div class="timerwrap"><div class="timer" id="elapsed" aria-live="off">00:00</div><p class="note">Keep going. Take your time.</p></div>
+  <div class="countbox" id="countBox" role="status" aria-live="polite"><span class="n" id="total">0</span><span class="l" id="totalWord">fillers</span></div>
+
+  <div class="frow"><div class="fchips" id="fillerRow" aria-label="Filler words being counted"></div>
+    <button class="link" id="fillerEditBtn" aria-expanded="false" aria-controls="fillerEdit">Edit</button></div>
+  <section class="stack" id="fillerEdit" aria-labelledby="hFill" hidden>
     <div class="bar" style="min-height:0"><h3 id="hFill">Filler words <span class="note" id="fillerSum" style="font-weight:500"></span></h3>
       <button class="link" id="moreWords" aria-expanded="false">Add words</button></div>
     <div class="pills fillers" id="fillerChips"></div>
     <div class="pills fillers more" id="fillerMore" hidden></div>
   </section>
 
-  <section class="stack" aria-labelledby="hFb">
-    <h3 id="hFb">Feedback <span class="note" id="promptSum" style="font-weight:500"></span></h3>
-    <div class="pills" id="promptChips">
-      <label class="pill"><input type="checkbox" id="aVibe" checked><span>Vibration</span></label>
-      <label class="pill"><input type="checkbox" id="aBeep"><span>Sound</span></label>
-    </div>
-    <p class="note" id="fbNote">Get a gentle buzz when you say a filler.</p>
-  </section>
-
-  <div style="flex:1 1 auto"></div>
-  <p class="err" id="err" hidden role="alert"></p>
-  <button class="btn" id="startBtn">Start practice</button>
-  <p class="note" style="text-align:center" id="audioNote">Um and uh are detected on this phone. Word fillers use your browser's speech recognition, which may process audio online.</p>
-</main>
-
-<!-- 2 · Live practice -->
-<main class="screen" id="vLive" hidden>
-  <div class="bar">
-    <span class="status" id="status" role="status">Practice session · Listening</span>
-    <span class="note" id="liveWho"></span>
+  <div class="alertrow" id="promptChips">
+    <label class="circ" title="Vibration"><input type="checkbox" id="aVibe" checked aria-label="Vibration"><span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="4" width="8" height="16" rx="2"/><path d="M4.5 9v6M19.5 9v6"/></svg></span></label>
+    <label class="circ" title="Sound"><input type="checkbox" id="aBeep" aria-label="Sound"><span><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 10v4h4l5 4V6L8 10z"/><path d="M16.5 9a4 4 0 0 1 0 6M19 6.5a7.5 7.5 0 0 1 0 11"/></svg></span></label>
+    <label class="switch on" id="calLiveRow"><span>Show ums for fine tuning <small id="calLiveState" hidden>· On</small></span>
+      <input type="checkbox" id="calLive" role="switch" checked></label>
   </div>
-  <div class="timerwrap"><div class="timer" id="elapsed" aria-live="off">00:00</div><p class="note">Keep going. Take your time.</p></div>
-  <div class="countbox" id="countBox" role="status" aria-live="polite"><span class="n" id="total">0</span><span class="l" id="totalWord">fillers</span></div>
-  <label class="switch on" id="calLiveRow"><span>Calibrate as I go <small id="calLiveState">· On</small></span>
-    <input type="checkbox" id="calLive" role="switch" checked></label>
+  <p class="note" id="fbNote" hidden></p>
   <canvas id="liveWave" aria-hidden="true"></canvas>
   <div class="catch" id="catch" role="status" aria-live="polite" hidden>
     <span class="ic"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.5" aria-hidden="true"><rect x="7.5" y="4" width="9" height="16" rx="2"/><path d="M4 9v6M20 9v6"/></svg></span>
@@ -322,7 +323,9 @@ th{font:600 12px var(--body);color:var(--muted)}
     <button class="btn secondary" id="pauseBtn" style="width:100%;min-height:56px">Pause</button>
     <button class="btn" id="endBtn" style="min-height:56px">End practice</button>
   </div>
+  <p class="err" id="err" hidden role="alert"></p>
   <div class="livectl" id="liveIdle" hidden><button class="btn start-big" id="liveStart">START</button></div>
+  <p class="note" style="text-align:center" id="audioNote">Um and uh are detected on this phone. Word fillers use your browser's speech recognition, which may process audio online.</p>
 </main>
 
 <!-- 3 · Session summary -->
@@ -513,19 +516,23 @@ const $=s=>document.querySelector(s);
 const pillHtml=f=>`<label class="pill"><input type="checkbox" value="${f.id}" ${f.on?'checked':''}><span>${f.label}</span></label>`;
 $('#fillerChips').innerHTML = FILLERS.slice(0,6).map(pillHtml).join('');   // the six everyday ones; the rest under "Add words"
 $('#fillerMore').innerHTML = FILLERS.slice(6).map(pillHtml).join('');
-function syncFillerSum(){const n=enabled().size;$('#fillerSum').textContent=`· ${n} of ${FILLERS.length} on`;}
+function syncFillerSum(){const on=enabled(), n=on.size;$('#fillerSum').textContent=`· ${n} of ${FILLERS.length} on`;
+  $('#fillerRow').innerHTML=n?FILLERS.filter(f=>on.has(f.id)).map(f=>`<span class="fchip">${f.label}</span>`).join(''):'<span class="note">No filler words on</span>';}
+$('#fillerEditBtn').addEventListener('click',e=>{ const open=$('#fillerEdit').hidden; $('#fillerEdit').hidden=!open; e.currentTarget.setAttribute('aria-expanded',open); e.currentTarget.textContent=open?'Done':'Edit'; });
+function syncIdle(){ $('#who').disabled=running; $('#fillerEditBtn').hidden=running;   // who and which words are fixed once a session starts
+  if(running&&!$('#fillerEdit').hidden) $('#fillerEditBtn').click(); }
 document.querySelectorAll('.fillers').forEach(el=>el.addEventListener('change',syncFillerSum)); syncFillerSum();
 $('#moreWords').addEventListener('click',e=>{ const open=$('#fillerMore').hidden; $('#fillerMore').hidden=!open; e.currentTarget.setAttribute('aria-expanded',open); e.currentTarget.textContent=open?'Fewer words':'Add words'; });
 
 // ---------- Screens ----------
-const VIEWS=['vSetup','vLive','vSummary','vReview','vCal','vLab'], TABS=['vSetup','vLive','vSummary','vCal','vLab']; let viewStack=['vSetup'];
+const VIEWS=['vLive','vSummary','vReview','vCal','vLab'], TABS=['vLive','vSummary','vCal','vLab']; let viewStack=['vLive'];
 function go(v,push=true){
   for(const id of VIEWS) $('#'+id).hidden=id!==v;
   if(TABS.includes(v)) viewStack=[v]; else if(push&&viewStack[viewStack.length-1]!==v) viewStack.push(v);
   const tab=TABS.includes(v)?v:viewStack.find(x=>TABS.includes(x))||'vCal';            // Review sits under Calibrate unless opened from elsewhere
   document.querySelectorAll('.tabbar [data-go]').forEach(b=>{ if(b.dataset.go===tab) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
   scrollTo(0,0);
-  if(v==='vLive'){ $('#liveCtl').hidden=!running; $('#liveIdle').hidden=running;
+  if(v==='vLive'){ $('#liveCtl').hidden=!running; $('#liveIdle').hidden=running; $('#audioNote').hidden=running; syncIdle();
     if(!running&&!$('#endBtn').textContent.startsWith('Done')){ $('#status').textContent=mode==='live'?'Ready to practise':NOTES[mode]+' · Ready'; $('#status').classList.remove('paused');
       $('#elapsed').textContent='00:00'; $('#feedWrap').hidden=true; $('#catch').hidden=true; $('#transcript').hidden=true;
       const e=$('#engine').value; $('#calLiveRow').hidden=!((e==='local'||e==='hybrid')&&$('#keepRec').checked&&mode==='live'); } }
@@ -533,7 +540,7 @@ function go(v,push=true){
   if(v==='vCal'){ calRefresh(); renderLib(); }
 }
 document.querySelector('.tabbar').addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b) go(b.dataset.go); });
-function back(){ viewStack.pop(); go(viewStack[viewStack.length-1]||'vSetup',false); }
+function back(){ viewStack.pop(); go(viewStack[viewStack.length-1]||'vLive',false); }
 document.addEventListener('click',e=>{ if(e.target.closest('[data-back]')) back(); });
 $('#script').textContent = SCRIPT;
 
@@ -547,17 +554,17 @@ $('#sensSeg').addEventListener('click',e=>{ const b=e.target.closest('button[dat
   $('#sens').value=b.dataset.v; $('#sensSeg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); });
 // feedback summary
 function syncPromptSum(){ const v=$('#aVibe').checked, b=$('#aBeep').checked;
-  $('#fbNote').textContent=v&&b?'A gentle buzz and a soft tone when you say a filler.':v?'Get a gentle buzz when you say a filler.':b?'Hear a soft tone when you say a filler.':'No buzz or tone: fillers are only counted.';
-  $('#promptSum').textContent=''; }
+  $('#fbNote').textContent=v&&b?'A gentle buzz and a soft tone when you say a filler.':v?'Get a gentle buzz when you say a filler.':b?'Hear a soft tone when you say a filler.':'No buzz or tone: fillers are only counted.'; }
 $('#promptChips').addEventListener('change',syncPromptSum); syncPromptSum();
 
 // tests (from Lab tools): run on the practice screens with their own panel
 const NOTES={ live:'', latency:'Response time test', accuracy:'Read-aloud check' };
 function setMode(m){ if(running) stop(); mode=m; $('#latencyPanel').hidden=mode!=='latency'; $('#accPanel').hidden=mode!=='accuracy';
-  $('#modeBar').hidden=mode==='live'; $('#modeNote').textContent=NOTES[mode]+': start practice to begin.'; $('#startBtn').textContent=mode==='live'?'Start practice':'Start test'; }
-$('#testLatency').addEventListener('click',()=>{ setMode('latency'); go('vSetup'); });
-$('#testAcc').addEventListener('click',()=>{ setMode('accuracy'); go('vSetup'); });
-$('#modeCancel').addEventListener('click',()=>setMode('live'));
+  $('#modeBar').hidden=mode==='live'; $('#modeNote').textContent=NOTES[mode]+': tap START to begin.'; $('#liveStart').textContent=mode==='live'?'START':'START TEST'; }
+$('#testLatency').addEventListener('click',()=>{ setMode('latency'); go('vLive'); });
+$('#testAcc').addEventListener('click',()=>{ setMode('accuracy'); go('vLive'); });
+$('#modeCancel').addEventListener('click',()=>{ setMode('live'); go('vLive'); });
+go('vLive');
 
 // ---------- Alerts ----------
 function prompt(){
@@ -1175,7 +1182,7 @@ function stop(failed){
   try{stream&&stream.getTracks().forEach(t=>t.stop());}catch(e){} stream=null;
   try{wakeLock&&wakeLock.release();}catch(e){} wakeLock=null;
   render();
-  if(failed||!wasRunning){ go('vSetup'); return; }
+  if(failed||!wasRunning){ go('vLive'); return; }
   if(mode==='live'){ buildSummary(); go('vSummary'); }
   else { $('#status').textContent=NOTES[mode]+' · Finished'; $('#pauseBtn').hidden=true; $('#endBtn').textContent='Done'; }
 }
@@ -1204,13 +1211,12 @@ async function countdown(){
   if(!cdOn) return; ov.hidden=true; cdOn=false; start();
 }
 $('#cdCancel').addEventListener('click',()=>{ cdOn=false; $('#countdown').hidden=true; });
-$('#startBtn').addEventListener('click',countdown);
 $('#liveStart').addEventListener('click',countdown);
 function liveDot(on){ const b=document.querySelector('.tabbar [data-go="vLive"]'); let d=b.querySelector('.live-dot');
   if(on&&!d){ d=document.createElement('span'); d.className='live-dot'; d.setAttribute('aria-hidden','true'); b.append(d); b.setAttribute('aria-label','Practice, session running'); }
   if(!on&&d){ d.remove(); b.removeAttribute('aria-label'); } }
 $('#pauseBtn').addEventListener('click',()=>{ autoPause=false; setPaused(!paused); });
-$('#endBtn').addEventListener('click',()=>{ if(running) stop(); else { setMode('live'); go('vSetup'); } });
+$('#endBtn').addEventListener('click',()=>{ if(running) stop(); else { setMode('live'); $('#endBtn').textContent='End practice'; go('vLive'); } });
 $('#tapBtn').addEventListener('pointerdown',()=>{ if(!running){showErr('Start the test first.');return;} taps.push({time:performance.now(),matched:false,lat:null}); render(); });
 
 // ---------- Live: calm waveform ----------
@@ -1308,7 +1314,7 @@ function buildSummary(){
   const rows=Object.entries(perId).filter(([,v])=>v>0).map(([k,v])=>`<div><span>${k==='snd'?'um / uh':LABEL[k]}</span><b>${v}</b></div>`);
   $('#sumBrk').innerHTML=rows.length?rows.join(''):'<div><span>None this time</span><b>0</b></div>';
 }
-$('#againBtn').addEventListener('click',()=>go('vSetup'));
+$('#againBtn').addEventListener('click',()=>go('vLive'));
 $('#sumReview').addEventListener('click',async()=>{ go('vReview'); if(lastSavedId) await refreshSessions(lastSavedId); setTimeout(drawTl,30); });
 
 // ---------- Copy ----------
