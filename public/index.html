@@ -25,7 +25,19 @@
 [hidden]{display:none!important}
 html,body{margin:0}
 body{background:var(--bg);color:var(--text);font:16px/1.5 var(--body);-webkit-text-size-adjust:100%}
-.screen{max-width:560px;margin:0 auto;min-height:100dvh;display:flex;flex-direction:column;gap:20px;
+/* large heading across the top, and the section bar along the bottom */
+.masthead{max-width:560px;margin:0 auto;padding:max(14px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) 0 max(20px,env(safe-area-inset-left))}
+.wordmark.big{font:700 clamp(30px,9.2vw,54px)/1.05 var(--body);letter-spacing:-.02em;white-space:nowrap;padding-bottom:12px;border-bottom:1px solid var(--rule)}
+.tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--bg);border-top:1px solid var(--line);padding:0 max(6px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(6px,env(safe-area-inset-left))}
+.tabin{max-width:560px;margin:0 auto;display:grid;grid-template-columns:repeat(6,minmax(0,1fr))}
+.tabbar button{min-height:62px;padding:6px 2px 4px;border:0;background:transparent;color:var(--muted);font:500 11px/1.1 var(--body);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;touch-action:manipulation;position:relative}
+.tabbar svg{width:22px;height:22px;fill:none;stroke:currentColor;stroke-width:1.5;stroke-linecap:round;stroke-linejoin:round}
+.tabbar button[aria-current=page]{color:var(--fg);font-weight:700}
+.tabbar button[aria-current=page]::before{content:'';position:absolute;top:0;left:22%;right:22%;height:3px;border-radius:0 0 3px 3px;background:var(--accent)}
+.tabbar button:focus-visible{outline:2px solid var(--accent);outline-offset:-4px;border-radius:12px}
+.tabbar .live-dot{position:absolute;top:8px;right:calc(50% - 18px);width:8px;height:8px;border-radius:4px;background:var(--accent-hi)}
+.screen{max-width:560px;margin:0 auto;display:flex;flex-direction:column;gap:20px;
+  padding-bottom:calc(84px + env(safe-area-inset-bottom)) !important;
   padding:max(16px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) max(24px,env(safe-area-inset-bottom)) max(20px,env(safe-area-inset-left))}
 .bar{display:flex;align-items:center;justify-content:space-between;gap:12px;min-height:44px}
 .wordmark{font:700 18px/1 var(--body);letter-spacing:.01em;color:var(--fg);margin:0}
@@ -85,7 +97,7 @@ select,input[type=password],input[type=text]{font:500 16px var(--body);height:46
 .catch .ic{flex:none;width:40px;height:40px;border-radius:20px;background:var(--panel);color:var(--accent);display:grid;place-items:center}
 .catch b{display:block;color:var(--fg);font-size:16px}
 .catch .ibtn{border-color:var(--peach-line);color:var(--accent-text);background:transparent;white-space:nowrap;flex:none}
-.livectl{position:sticky;bottom:0;z-index:5;background:var(--bg);padding:10px 0 max(4px,env(safe-area-inset-bottom));margin-bottom:calc(-1*max(24px,env(safe-area-inset-bottom)))}
+.livectl{position:sticky;bottom:calc(63px + env(safe-area-inset-bottom));z-index:5;background:var(--bg);padding:10px 0}
 .feed{display:flex;flex-direction:column;gap:10px;max-height:46vh;overflow-y:auto;overscroll-behavior:contain}
 .lc{border-radius:20px;background:var(--surface);padding:12px;display:flex;flex-direction:column;gap:10px}
 .lc.new{background:var(--peach);border:1.5px solid var(--peach-line)}
@@ -180,14 +192,21 @@ th{font:600 12px var(--body);color:var(--muted)}
 <body>
 <div id="flash"></div>
 
+<header class="masthead"><p class="wordmark big">Filler <span>Killer</span> Lab</p></header>
+
+<nav class="tabbar" aria-label="Sections">
+  <div class="tabin">
+    <button data-go="vSetup"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 11l8-6 8 6v8a1 1 0 0 1-1 1h-4v-6h-6v6H5a1 1 0 0 1-1-1z"/></svg>Home</button>
+    <button data-go="vLive"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="9" y="3" width="6" height="11" rx="3"/><path d="M5.5 11a6.5 6.5 0 0 0 13 0M12 17.5V21"/></svg>Practice</button>
+    <button data-go="vSummary"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 20V12M10 20V6M15 20v-9M20 20V9"/></svg>Summary</button>
+    <button data-go="libPanel"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 12h2l2-5 3 10 3-8 2 3h6"/></svg>Library</button>
+    <button data-go="vCal"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 7h10M18 7h2M4 17h4M12 17h8"/><circle cx="16" cy="7" r="2"/><circle cx="10" cy="17" r="2"/></svg>Calibrate</button>
+    <button data-go="vLab"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="3"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M4.9 19.1L7 17M17 7l2.1-2.1"/></svg>Settings</button>
+  </div>
+</nav>
+
 <!-- 1 · Practice setup -->
 <main class="screen" id="vSetup">
-  <div class="bar">
-    <p class="wordmark">Filler <span>Killer</span> Lab</p>
-    <button class="iconbtn" id="setBtn" aria-label="Lab tools and settings">
-      <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.4" aria-hidden="true"><circle cx="12" cy="12" r="3.2"/><path d="M19.4 15a1.7 1.7 0 0 0 .3 1.8l.1.1a2 2 0 1 1-2.8 2.8l-.1-.1a1.7 1.7 0 0 0-1.8-.3 1.7 1.7 0 0 0-1 1.5V21a2 2 0 1 1-4 0v-.1a1.7 1.7 0 0 0-1.1-1.5 1.7 1.7 0 0 0-1.8.3l-.1.1a2 2 0 1 1-2.8-2.8l.1-.1a1.7 1.7 0 0 0 .3-1.8 1.7 1.7 0 0 0-1.5-1H3a2 2 0 1 1 0-4h.1a1.7 1.7 0 0 0 1.5-1.1 1.7 1.7 0 0 0-.3-1.8l-.1-.1a2 2 0 1 1 2.8-2.8l.1.1a1.7 1.7 0 0 0 1.8.3H9a1.7 1.7 0 0 0 1-1.5V3a2 2 0 1 1 4 0v.1a1.7 1.7 0 0 0 1 1.5 1.7 1.7 0 0 0 1.8-.3l.1-.1a2 2 0 1 1 2.8 2.8l-.1.1a1.7 1.7 0 0 0-.3 1.8V9a1.7 1.7 0 0 0 1.5 1H21a2 2 0 1 1 0 4h-.1a1.7 1.7 0 0 0-1.5 1z"/></svg>
-    </button>
-  </div>
 
   <label class="person"><span class="av" id="whoAv" aria-hidden="true">M</span><span class="sr" style="font-weight:500">Practising as</span>
     <select id="who" aria-label="Who's practising"></select></label>
@@ -268,17 +287,17 @@ th{font:600 12px var(--body);color:var(--muted)}
   <div class="transcript" id="transcript" aria-live="polite" hidden></div>
   <div class="tally" id="tally"></div>
   <div style="flex:1 1 auto"></div>
-  <div class="two livectl">
+  <div class="two livectl" id="liveCtl">
     <button class="btn secondary" id="pauseBtn" style="width:100%;min-height:56px">Pause</button>
     <button class="btn" id="endBtn" style="min-height:56px">End practice</button>
   </div>
+  <div class="livectl" id="liveIdle" hidden><button class="btn" id="liveStart">Start practice</button></div>
 </main>
 
 <!-- 3 · Session summary -->
 <main class="screen" id="vSummary" hidden>
-  <div class="bar"><p class="wordmark">Filler <span>Killer</span> Lab</p><span class="note" id="sumWho"></span></div>
-  <div><h1>Finding your flow</h1><p class="lead">Small steps towards more confident speaking.</p></div>
-  <div class="card" style="gap:4px"><span class="big" id="sumBig">0 fillers in 0 minutes</span><span class="note" style="font-size:14px" id="sumRate"></span></div>
+  <div><h1>Finding your flow</h1><p class="lead">Small steps towards more confident speaking. <span class="note" id="sumWho"></span></p></div>
+  <div class="card" style="gap:4px"><span class="big" id="sumBig">No session yet</span><span class="note" style="font-size:14px" id="sumRate">Finish a practice to see your summary here.</span></div>
   <section class="stack" id="chartWrap" hidden>
     <div class="bar" style="min-height:0"><h3>Fillers per minute · last 7 days</h3><span class="note" id="chartN"></span></div>
     <div class="chart" id="chart" role="img"></div>
@@ -319,28 +338,40 @@ th{font:600 12px var(--body);color:var(--muted)}
 
 <!-- 5 · Um library -->
 <main class="screen" id="libPanel" hidden>
-  <div class="bar"><button class="back" id="libClose">‹ Back</button><span class="note" id="libWho"></span></div>
+  <div class="bar" style="min-height:0"><button class="back" id="libClose" hidden>‹ Back</button><span></span><span class="note" id="libWho"></span></div>
   <div><h2>Your um library</h2><p class="lead" style="font-size:15px">Every um from your sessions. Trim each to just the sound, and leave out anything that isn't one. These help tune detection to your voice.</p></div>
   <p class="note" id="libSum"></p>
   <div class="alist" id="libList"></div>
 </main>
 
-<!-- 6 · Lab tools -->
+<!-- 6 · Calibrate -->
+<main class="screen" id="vCal" hidden>
+  <div><h2>Tune to my voice</h2><p class="lead" style="font-size:15px">Check your ums in a few sessions, then tune detection to how you speak. <span class="note" id="calWho"></span></p></div>
+  <section class="card">
+    <div class="bar" style="min-height:0;align-items:flex-start"><div><h3 style="font-size:16px">Your tuning</h3><p class="note" id="calNote"></p></div>
+      <label class="chip" style="flex:none"><input type="checkbox" id="useCal" disabled> On</label></div>
+    <div class="scroll"><table id="calTable" hidden><thead><tr><th>Setting</th><th>Standard</th><th>Yours</th></tr></thead><tbody></tbody></table></div>
+    <button class="btn" id="calBtn">Tune again</button>
+  </section>
+  <section class="stack"><h3>Check your ums</h3>
+    <div class="navlist">
+      <button class="navrow" id="revBtn"><span>Review sessions<small>Play a session back, mark each um, add any it missed</small></span><span aria-hidden="true">›</span></button>
+      <button class="navrow" id="libBtn"><span>Um library<small>Trim each um and leave out any that aren't</small></span><span aria-hidden="true">›</span></button>
+    </div>
+  </section>
+  <section class="stack"><h3>How it works</h3>
+    <p class="note">Practise with “Calibrate as I go” on, or review a session afterwards. Mark each um, add any it missed, and tick “I've reviewed every filler”. With about 3 minutes and 8 ums reviewed, tap Tune again. More reviewed sessions make it more reliable.</p>
+  </section>
+</main>
+
+<!-- 7 · Settings -->
 <main class="screen" id="vLab" hidden>
-  <div class="bar"><button class="back" data-back>‹ Back</button><span></span></div>
-  <h2>Lab tools</h2>
+  <h2>Settings</h2>
 
   <section class="stack"><h3>Who's practising</h3>
     <div class="who-pills" id="whoPills"></div>
     <button class="link" id="whoDel" style="align-self:flex-start">Remove this person</button>
     <button id="whoAdd" hidden></button>
-  </section>
-
-  <section class="card">
-    <div class="bar" style="min-height:0;align-items:flex-start"><div><h3 style="font-size:16px">Tune to my voice</h3><p class="note" id="calNote"></p></div>
-      <label class="chip" style="flex:none"><input type="checkbox" id="useCal" disabled> On</label></div>
-    <div class="scroll"><table id="calTable" hidden><thead><tr><th>Setting</th><th>Standard</th><th>Yours</th></tr></thead><tbody></tbody></table></div>
-    <div class="row"><button class="btn quiet" id="libBtn">Um library</button><button class="btn quiet" id="revBtn">Review sessions</button><button class="btn quiet" id="calBtn">Tune again</button></div>
   </section>
 
   <section class="stack"><h3>Tests</h3>
@@ -461,16 +492,22 @@ document.querySelectorAll('.fillers').forEach(el=>el.addEventListener('change',s
 $('#moreWords').addEventListener('click',e=>{ const open=$('#fillerMore').hidden; $('#fillerMore').hidden=!open; e.currentTarget.setAttribute('aria-expanded',open); e.currentTarget.textContent=open?'Fewer words':'Add words'; });
 
 // ---------- Screens ----------
-const VIEWS=['vSetup','vLive','vSummary','vReview','libPanel','vLab']; let viewStack=['vSetup'];
+const VIEWS=['vSetup','vLive','vSummary','vReview','libPanel','vCal','vLab'], TABS=['vSetup','vLive','vSummary','libPanel','vCal','vLab']; let viewStack=['vSetup'];
 function go(v,push=true){
   for(const id of VIEWS) $('#'+id).hidden=id!==v;
-  if(push&&viewStack[viewStack.length-1]!==v) viewStack.push(v);
-  if(v==='vSetup'||v==='vLive'||v==='vSummary') viewStack=[v];
+  if(TABS.includes(v)) viewStack=[v]; else if(push&&viewStack[viewStack.length-1]!==v) viewStack.push(v);
+  const tab=TABS.includes(v)?v:viewStack.find(x=>TABS.includes(x))||'vCal';            // Review sits under Calibrate unless opened from elsewhere
+  document.querySelectorAll('.tabbar [data-go]').forEach(b=>{ if(b.dataset.go===tab) b.setAttribute('aria-current','page'); else b.removeAttribute('aria-current'); });
   scrollTo(0,0);
+  if(v==='vLive'){ $('#liveCtl').hidden=!running; $('#liveIdle').hidden=running;
+    if(!running&&!$('#endBtn').textContent.startsWith('Done')){ $('#status').textContent=mode==='live'?'Ready to practise':NOTES[mode]+' · Ready'; $('#status').classList.remove('paused');
+      $('#elapsed').textContent='00:00'; $('#feedWrap').hidden=true; $('#catch').hidden=true; $('#transcript').hidden=true;
+      const e=$('#engine').value; $('#calLiveRow').hidden=!((e==='local'||e==='hybrid')&&$('#keepRec').checked&&mode==='live'); } }
   if(v==='vReview') setTimeout(()=>{ drawTl(); },30);
   if(v==='libPanel') renderLib();
-  if(v==='vLab') calRefresh();
+  if(v==='vCal') calRefresh();
 }
+document.querySelector('.tabbar').addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b) go(b.dataset.go); });
 function back(){ viewStack.pop(); go(viewStack[viewStack.length-1]||'vSetup',false); }
 document.addEventListener('click',e=>{ if(e.target.closest('[data-back]')) back(); });
 $('#script').textContent = SCRIPT;
@@ -481,7 +518,6 @@ function syncEngine(){engine=$('#engine').value;$('#engineSum').textContent=$('#
 $('#engine').addEventListener('change',syncEngine); syncEngine();
 
 // Lab tools and the sensitivity choice
-$('#setBtn').addEventListener('click',()=>go('vLab'));
 $('#sensSeg').addEventListener('click',e=>{ const b=e.target.closest('button[data-v]'); if(!b) return;
   $('#sens').value=b.dataset.v; $('#sensSeg').querySelectorAll('button').forEach(x=>x.setAttribute('aria-pressed',x===b)); });
 // feedback summary
@@ -921,7 +957,7 @@ const who=()=>profs().current, calKey=()=>'fk_cal:'+who();
 try{ const old=localStorage.getItem('fk_cal'); if(old!==null){ const k='fk_cal:'+profs().list[0]; if(localStorage.getItem(k)===null) localStorage.setItem(k,old); localStorage.removeItem('fk_cal'); } }catch(e){}
 function renderWho(){ const p=profs(), s=$('#who');
   s.replaceChildren(...p.list.map(n=>{ const o=document.createElement('option'); o.value=n; o.textContent=n; return o; })); s.value=p.current; $('#whoDel').disabled=p.list.length<2;
-  $('#whoAv').textContent=(p.current[0]||'?').toUpperCase(); $('#liveWho').textContent=$('#sumWho').textContent=p.current;
+  $('#whoAv').textContent=(p.current[0]||'?').toUpperCase(); $('#liveWho').textContent=p.current; $('#sumWho').textContent=$('#calWho').textContent='· '+p.current;
   const pills=p.list.map(n=>{ const b=document.createElement('button'); b.setAttribute('aria-pressed',n===p.current); b.dataset.who=n;
       const av=document.createElement('span'); av.textContent=(n[0]||'?').toUpperCase(); av.style.cssText='flex:none;width:26px;height:26px;border-radius:13px;display:grid;place-items:center;font-size:12px;background:'+(n===p.current?'var(--bg);color:var(--fg)':'var(--sage);color:#173D32');
       const nm=document.createElement('span'); nm.textContent=n+(n===p.current?' ✓':''); b.append(av,nm); return b; });
@@ -967,7 +1003,7 @@ function libItems(m){ m.spans=m.spans||{}; m.off=m.off||{};
 }
 const sessDate=m=>new Date(m.date).toLocaleString([],{day:'numeric',month:'short',hour:'2-digit',minute:'2-digit'});
 function updateLibBtn(){ const n=metas.reduce((a,m)=>a+m.alerts.filter(x=>x.label!=='not').length+m.missed.filter(t=>missOn(m,t)).length,0);
-  $('#libBtn').textContent=`Um library · ${who()} · ${n} um${n===1?'':'s'}`; }
+  $('#libBtn small').textContent=`${n} um${n===1?'':'s'} for ${who()} · trim each and leave out any that aren't`; }
 function renderLib(){
   $('#libWho').textContent=who(); libMap=new Map();
   const groups=metas.map(m=>({m,items:libItems(m)})).filter(g=>g.items.length);
@@ -1070,7 +1106,7 @@ async function start(){
   $('#err').hidden=true; reset(); engine=$('#engine').value;
   try{ beepCtx=beepCtx||new (window.AudioContext||window.webkitAudioContext)(); await beepCtx.resume(); }catch(e){}
   try{ wakeLock=await navigator.wakeLock?.request('screen'); }catch(e){}
-  t0=performance.now(); running=true; paused=false; pausedMs=0; autoPause=false; waveHist=[]; cardOpen=new Set(); lastFire=null;
+  t0=performance.now(); running=true; paused=false; pausedMs=0; autoPause=false; waveHist=[]; cardOpen=new Set(); lastFire=null; liveDot(true);
   const snd=engine==='local'||engine==='hybrid';
   $('#status').textContent=(mode==='live'?'Practice session':NOTES[mode])+' · Listening'; $('#status').classList.remove('paused');
   $('#pauseBtn').textContent='Pause'; $('#pauseBtn').hidden=false; $('#endBtn').textContent='End practice'; $('#catch').hidden=true;
@@ -1081,7 +1117,7 @@ async function start(){
   liveCards();
 }
 function stop(failed){
-  const wasRunning=running; running=false; clearInterval(timer); if(paused){ pausedMs+=performance.now()-pausedAt; paused=false; }
+  const wasRunning=running; running=false; clearInterval(timer); liveDot(false); if(paused){ pausedMs+=performance.now()-pausedAt; paused=false; }
   try{rec&&rec.stop();}catch(e){} rec=null;
   try{ if(ws&&ws.readyState===1){ws.send(JSON.stringify({type:'CloseStream'}));} ws&&setTimeout(()=>{try{ws.close()}catch(e){}},1500);}catch(e){}
   try{proc&&proc.disconnect();}catch(e){} proc=null;
@@ -1102,6 +1138,10 @@ function setPaused(on){
   $('#status').textContent=(mode==='live'?'Practice session':NOTES[mode])+(on?' · Paused':' · Listening'); $('#status').classList.toggle('paused',on); tick();
 }
 $('#startBtn').addEventListener('click',()=>{ if(!running) start(); });
+$('#liveStart').addEventListener('click',()=>{ if(!running) start(); });
+function liveDot(on){ const b=document.querySelector('.tabbar [data-go="vLive"]'); let d=b.querySelector('.live-dot');
+  if(on&&!d){ d=document.createElement('span'); d.className='live-dot'; d.setAttribute('aria-hidden','true'); b.append(d); b.setAttribute('aria-label','Practice, session running'); }
+  if(!on&&d){ d.remove(); b.removeAttribute('aria-label'); } }
 $('#pauseBtn').addEventListener('click',()=>{ autoPause=false; setPaused(!paused); });
 $('#endBtn').addEventListener('click',()=>{ if(running) stop(); else { setMode('live'); go('vSetup'); } });
 $('#tapBtn').addEventListener('pointerdown',()=>{ if(!running){showErr('Start the test first.');return;} taps.push({time:performance.now(),matched:false,lat:null}); render(); });
