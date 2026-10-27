@@ -90,8 +90,21 @@ select,input[type=password],input[type=text]{font:500 16px var(--body);height:46
 /* live screen */
 .status{display:inline-flex;align-items:center;gap:8px;height:32px;padding:0 14px;border-radius:16px;background:var(--surface);color:var(--fg);font:600 13px var(--body)}
 .status.paused{background:var(--peach)}
-.timer{font:400 clamp(56px,20vw,88px)/1 var(--display);color:var(--fg);font-variant-numeric:tabular-nums}
-.timer.small{font-size:56px}
+.timerwrap{display:flex;flex-direction:column;align-items:center;gap:6px;text-align:center}
+.timerwrap .note{font-size:15px}
+.timer{font:400 clamp(84px,28vw,128px)/1 var(--display);color:var(--fg);font-variant-numeric:tabular-nums;letter-spacing:-.01em}
+.countbox{align-self:center;min-width:min(240px,70%);display:flex;flex-direction:column;align-items:center;padding:14px 28px 12px;border-radius:28px;border:2px solid var(--line);background:var(--surface);color:var(--fg);
+  transition:background .6s,color .6s,border-color .6s}
+.countbox .n{font:400 clamp(64px,20vw,96px)/1 var(--display);font-variant-numeric:tabular-nums}
+.countbox .l{font:600 14px var(--body);letter-spacing:.04em;text-transform:uppercase;opacity:.8}
+.countbox.bump{background:var(--accent);border-color:var(--accent);color:var(--accent-ink);transition:none}
+.start-big{font:800 22px/1 var(--body);letter-spacing:.14em;min-height:64px}
+.countdown{position:fixed;inset:0;z-index:60;background:var(--bg);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:18px;padding:24px}
+.cd-n{font:400 clamp(160px,50vw,260px)/1 var(--display);color:var(--fg);font-variant-numeric:tabular-nums}
+.cd-n.go{color:var(--accent)}
+.countdown .btn{width:auto;min-width:160px}
+@media (prefers-reduced-motion:no-preference){.cd-n.tick{animation:cdpop .35s ease-out}}
+@keyframes cdpop{from{transform:scale(1.18);opacity:.4}to{transform:scale(1);opacity:1}}
 #liveWave{width:100%;height:72px;display:block}
 .catch{display:flex;gap:14px;align-items:center;padding:14px 16px;border-radius:22px;background:var(--peach);transition:opacity .4s}
 .catch .ic{flex:none;width:40px;height:40px;border-radius:20px;background:var(--panel);color:var(--accent);display:grid;place-items:center}
@@ -192,6 +205,12 @@ th{font:600 12px var(--body);color:var(--muted)}
 <body>
 <div id="flash"></div>
 
+<div class="countdown" id="countdown" hidden role="dialog" aria-modal="true" aria-label="Starting in">
+  <div class="cd-n" id="cdN" aria-live="assertive">3</div>
+  <p class="lead" id="cdNote">Get ready…</p>
+  <button class="btn secondary" id="cdCancel">Cancel</button>
+</div>
+
 <header class="masthead"><p class="wordmark big">Filler <span>Killer</span> Lab</p></header>
 
 <nav class="tabbar" aria-label="Sections">
@@ -246,10 +265,8 @@ th{font:600 12px var(--body);color:var(--muted)}
     <span class="status" id="status" role="status">Practice session · Listening</span>
     <span class="note" id="liveWho"></span>
   </div>
-  <div class="bar" style="align-items:flex-end">
-    <div><div class="timer small" id="elapsed" aria-live="off">00:00</div><p class="note" style="font-size:15px">Keep going. Take your time.</p></div>
-    <span class="count"><b><span id="total">0</span> <span id="totalWord">fillers</span></b></span>
-  </div>
+  <div class="timerwrap"><div class="timer" id="elapsed" aria-live="off">00:00</div><p class="note">Keep going. Take your time.</p></div>
+  <div class="countbox" id="countBox" role="status" aria-live="polite"><span class="n" id="total">0</span><span class="l" id="totalWord">fillers</span></div>
   <label class="switch on" id="calLiveRow"><span>Calibrate as I go <small id="calLiveState">· On</small></span>
     <input type="checkbox" id="calLive" role="switch" checked></label>
   <canvas id="liveWave" aria-hidden="true"></canvas>
@@ -291,7 +308,7 @@ th{font:600 12px var(--body);color:var(--muted)}
     <button class="btn secondary" id="pauseBtn" style="width:100%;min-height:56px">Pause</button>
     <button class="btn" id="endBtn" style="min-height:56px">End practice</button>
   </div>
-  <div class="livectl" id="liveIdle" hidden><button class="btn" id="liveStart">Start practice</button></div>
+  <div class="livectl" id="liveIdle" hidden><button class="btn start-big" id="liveStart">START</button></div>
 </main>
 
 <!-- 3 · Session summary -->
@@ -574,8 +591,11 @@ function fire(id, audioLatency){
 // ---------- Render ----------
 function median(a){if(!a.length)return null;const s=[...a].sort((x,y)=>x-y),m=s.length>>1;return s.length%2?s[m]:(s[m-1]+s[m])/2;}
 function fmtT(s){const m=Math.floor(s/60),r=Math.floor(s%60);return m+':'+String(r).padStart(2,'0');}
+let shownTotal=0, bumpTimer=null;
 function render(){
   $('#total').textContent=total; $('#totalWord').textContent=total===1?'filler':'fillers';
+  if(total>shownTotal){ const b=$('#countBox'); b.classList.add('bump'); clearTimeout(bumpTimer); bumpTimer=setTimeout(()=>b.classList.remove('bump'),450); }  // flash on each new filler
+  shownTotal=total;
   $('#tally').innerHTML=Object.entries(perId).map(([k,v])=>`<span>${LABEL[k]} ${v}</span>`).join('');
   const txt=(finalText+' '+interimText).trim();
   $('#transcript').hidden=!txt; $('#transcript').innerHTML = txt ? highlight(txt) : '';
@@ -778,7 +798,7 @@ function makeLocalDetector(m, preset, onFire, onProb, cfg){ // cfg: optional [th
 }
 async function startLocal(){
   const m=await loadLocalModel();
-  lstream=await navigator.mediaDevices.getUserMedia({audio:{channelCount:1,echoCancellation:false,noiseSuppression:false,autoGainControl:false}});
+  setAudioSession('auto'); lstream=await navigator.mediaDevices.getUserMedia(MIC);
   try{ lctx=new (window.AudioContext||window.webkitAudioContext)({sampleRate:16000}); }catch(e){ lctx=new (window.AudioContext||window.webkitAudioContext)(); }
   const ratio=lctx.sampleRate/16000; let carry=0;
   const preset=(document.getElementById('sens')||{}).value||'balanced', cfg=calFor(m, preset);
@@ -791,7 +811,7 @@ async function startLocal(){
   const feed=a=>{ if(paused) return;                                     // paused: not listening, not recording
     det.push(a); let e=0; for(let i=0;i<a.length;i++) e+=a[i]*a[i]; waveLevel(Math.sqrt(e/Math.max(1,a.length)));
     if(session && session.n<MAX_REC_S*16000){ const q=new Int16Array(a.length); for(let i=0;i<a.length;i++) q[i]=Math.max(-32768,Math.min(32767,Math.round(a[i]*32767))); session.chunks.push(q); session.n+=a.length; } };
-  const src=lctx.createMediaStreamSource(lstream); lproc=lctx.createScriptProcessor(2048,1,1);
+  lsrc=lctx.createMediaStreamSource(lstream); lproc=lctx.createScriptProcessor(2048,1,1);
   const mute=lctx.createGain(); mute.gain.value=0;
   lproc.onaudioprocess=e=>{
     const x=e.inputBuffer.getChannelData(0);
@@ -801,10 +821,28 @@ async function startLocal(){
     carry=(carry+n*ratio)-x.length; if(carry<0) carry=0;
     feed(out);
   };
-  src.connect(lproc); lproc.connect(mute); mute.connect(lctx.destination);
+  lsrc.connect(lproc); lproc.connect(mute); mute.connect(lctx.destination);
+}
+// Playback: clips are boosted to a full level. While the microphone is open an iPhone plays through the quiet earpiece,
+// so during a session the microphone is released for the clip (route returns to the loudspeaker) and reconnected after.
+let lsrc=null;
+const MIC={audio:{channelCount:1,echoCancellation:false,noiseSuppression:false,autoGainControl:false}};
+function setAudioSession(t){ try{ if(navigator.audioSession) navigator.audioSession.type=t; }catch(e){} }
+function micOff(){ try{lsrc&&lsrc.disconnect();}catch(e){} lsrc=null; try{lstream&&lstream.getTracks().forEach(t=>t.stop());}catch(e){} lstream=null; }
+async function micOn(){ if(!lctx||!lproc||lstream) return; lstream=await navigator.mediaDevices.getUserMedia(MIC); lsrc=lctx.createMediaStreamSource(lstream); lsrc.connect(lproc); }
+function normI16(a){ let pk=1; for(let i=0;i<a.length;i++){ const v=a[i]<0?-a[i]:a[i]; if(v>pk) pk=v; }
+  const k=Math.min(8,0.9*32767/pk), o=new Int16Array(a.length); for(let i=0;i<a.length;i++) o[i]=Math.round(a[i]*k); return o; }
+async function playLoud(pcm){
+  if(!pcm||!pcm.length) return;
+  if(running&&!paused){ autoPause=true; setPaused(true); }      // don't let the clip be heard as speech
+  micOff(); setAudioSession('playback');
+  try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); await actx.resume(); }catch(e){ return; }
+  const n=normI16(pcm), buf=actx.createBuffer(1,n.length,16000), ch=buf.getChannelData(0); for(let i=0;i<ch.length;i++) ch[i]=n[i]/32768;
+  try{ libSrc&&libSrc.stop(); }catch(e){} libSrc=actx.createBufferSource(); libSrc.buffer=buf; libSrc.connect(actx.destination);
+  libSrc.onended=()=>{ setAudioSession('auto'); if(autoPause&&running){ autoPause=false; setPaused(false); } }; libSrc.start();
 }
 function stopLocal(){
-  try{lproc&&lproc.disconnect();}catch(e){} lproc=null;
+  try{lproc&&lproc.disconnect();}catch(e){} lproc=null; lsrc=null;
   try{lctx&&lctx.close();}catch(e){} lctx=null;
   try{lstream&&lstream.getTracks().forEach(t=>t.stop());}catch(e){} lstream=null;
 }
@@ -847,7 +885,7 @@ async function refreshSessions(selectId){
 async function openSession(id){
   cur=metas.find(m=>m.id===+id); if(!cur) return;
   const a=await dbGetAudio(cur.id).catch(()=>null);
-  if(curUrl) URL.revokeObjectURL(curUrl); curUrl=a?URL.createObjectURL(wavBlob(a)):null;
+  if(curUrl) URL.revokeObjectURL(curUrl); curUrl=a?URL.createObjectURL(wavBlob(normI16(a))):null;   // playback copy at a full level
   if(curUrl) $('#player').src=curUrl; else $('#player').removeAttribute('src');
   curPcm=a||null; curPeaks=null; peakMax=1;
   if(a){ curPeaks=new Float32Array(Math.ceil(a.length/160)); for(let k=0;k<curPeaks.length;k++){ let mx=0; for(let i=k*160;i<Math.min(a.length,k*160+160);i++){ const v=a[i]<0?-a[i]:a[i]; if(v>mx) mx=v; } curPeaks[k]=mx; if(mx>peakMax) peakMax=mx; } }
@@ -937,6 +975,7 @@ $('#player').addEventListener('play',()=>{ const loop=()=>{ const p=$('#player')
     if(tv&&(t>tv[1]||t<tv[0])){ const sp=tv[1]-tv[0]; setView(t-sp*0.1,t+sp*0.9); } else drawTl();      // keep the playhead in view when zoomed
     if(!p.paused) requestAnimationFrame(loop); }; loop(); });
 $('#player').addEventListener('pause',()=>{ clearTimeout(snipTimer); drawTl(); });
+$('#player').addEventListener('play',()=>{ if(running){ setPaused(true); micOff(); } setAudioSession('playback'); });   // loudspeaker, not earpiece
 $('#player').addEventListener('seeked',drawTl);
 addEventListener('resize',drawTl);
 $('#expBtn').addEventListener('click',async()=>{ if(!cur) return; const stamp=(cur.name?cur.name.replace(/[^\w-]+/g,'-').replace(/^-+|-+$/g,'')+'-':'')+cur.date.slice(0,16).replace(/[:T]/g,'-');
@@ -1037,8 +1076,7 @@ async function playSpan(it,a,b){
   const au=await libGetAudio(it.m.id); if(!au) return;
   try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); await actx.resume(); }catch(e){ return; }
   const s0=Math.max(0,Math.floor(a*16000)), s1=Math.min(au.length,Math.ceil(b*16000)); if(s1<=s0) return;
-  const buf=actx.createBuffer(1,s1-s0,16000), ch=buf.getChannelData(0); for(let i=0;i<ch.length;i++) ch[i]=au[s0+i]/32768;
-  try{ libSrc&&libSrc.stop(); }catch(e){} libSrc=actx.createBufferSource(); libSrc.buffer=buf; libSrc.connect(actx.destination); libSrc.start();
+  playLoud(au.subarray(s0,s1));
 }
 function libSave(it){ it.m.spans[it.key]=it.span.slice(); dbPutMeta(it.m).catch(()=>showErr('Could not save the change.')); }
 $('#libList').addEventListener('click',e=>{ const b=e.target.closest('button[data-act]'); if(!b) return; const it=libMap.get(b.closest('.clip').dataset.id);
@@ -1133,12 +1171,30 @@ function stop(failed){
 function setPaused(on){
   if(!running||paused===on) return; paused=on;
   if(on){ pausedAt=performance.now(); try{rec&&rec.stop();}catch(e){} }
-  else { pausedMs+=performance.now()-pausedAt; if(engine==='browser'||engine==='hybrid'){ try{ startBrowser(); }catch(e){} } }
+  else { pausedMs+=performance.now()-pausedAt; setAudioSession('auto'); if(lctx&&!lstream) micOn().catch(e=>showErr(micMsg(e)));   // mic was released for playback
+    if(engine==='browser'||engine==='hybrid'){ try{ startBrowser(); }catch(e){} } }
   $('#pauseBtn').textContent=on?'Resume':'Pause';
   $('#status').textContent=(mode==='live'?'Practice session':NOTES[mode])+(on?' · Paused':' · Listening'); $('#status').classList.toggle('paused',on); tick();
 }
-$('#startBtn').addEventListener('click',()=>{ if(!running) start(); });
-$('#liveStart').addEventListener('click',()=>{ if(!running) start(); });
+// 3-2-1 countdown with a beep on each number and a higher one on "Go", then listening starts
+let cdOn=false;
+function tone(f,d,g){ if(!beepCtx) return; const o=beepCtx.createOscillator(), gn=beepCtx.createGain(), t=beepCtx.currentTime;
+  o.type='sine'; o.frequency.value=f; gn.gain.setValueAtTime(.0001,t); gn.gain.exponentialRampToValueAtTime(g,t+.015); gn.gain.exponentialRampToValueAtTime(.001,t+d);
+  o.connect(gn).connect(beepCtx.destination); o.start(t); o.stop(t+d+.02); }
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+async function countdown(){
+  if(running||cdOn) return; cdOn=true; $('#err').hidden=true;
+  try{ beepCtx=beepCtx||new (window.AudioContext||window.webkitAudioContext)(); await Promise.race([beepCtx.resume(),sleep(300)]); }catch(e){}   // never hold the countdown on audio
+  setAudioSession('playback');
+  const ov=$('#countdown'), n=$('#cdN'); ov.hidden=false; $('#cdNote').textContent='Get ready…'; $('#cdCancel').focus();
+  for(const k of [3,2,1]){ if(!cdOn) return; n.textContent=k; n.classList.remove('go','tick'); void n.offsetWidth; n.classList.add('tick');
+    tone(660,.18,.35); await sleep(1000); }
+  if(!cdOn) return; n.textContent='Go'; n.classList.add('go'); $('#cdNote').textContent='Listening now'; tone(990,.35,.4); await sleep(500);
+  if(!cdOn) return; ov.hidden=true; cdOn=false; start();
+}
+$('#cdCancel').addEventListener('click',()=>{ cdOn=false; $('#countdown').hidden=true; });
+$('#startBtn').addEventListener('click',countdown);
+$('#liveStart').addEventListener('click',countdown);
 function liveDot(on){ const b=document.querySelector('.tabbar [data-go="vLive"]'); let d=b.querySelector('.live-dot');
   if(on&&!d){ d=document.createElement('span'); d.className='live-dot'; d.setAttribute('aria-hidden','true'); b.append(d); b.setAttribute('aria-label','Practice, session running'); }
   if(!on&&d){ d.remove(); b.removeAttribute('aria-label'); } }
@@ -1197,13 +1253,7 @@ function drawLiveCard(el,keep){
   for(let px=0;px<W;px++){ let mx=0; for(let i=px*per;i<(px+1)*per&&i<pcm.length;i++){ const v=Math.abs(pcm[i]); if(v>mx) mx=v; } const h=Math.max(1,mx/pk*(H/2-4)); g.fillRect(px,H/2-h,1,2*h); }
   g.globalAlpha=1; g.fillStyle=cssv('--fg'); for(const t of sp){ const X=x(t); g.fillRect(X-2,0,4,H); }
 }
-function playPcm(pcm){
-  try{ actx=actx||new (window.AudioContext||window.webkitAudioContext)(); actx.resume(); }catch(e){ return; } if(!pcm.length) return;
-  const buf=actx.createBuffer(1,pcm.length,16000), ch=buf.getChannelData(0); for(let i=0;i<ch.length;i++) ch[i]=pcm[i]/32768;
-  try{ libSrc&&libSrc.stop(); }catch(e){} libSrc=actx.createBufferSource(); libSrc.buffer=buf; libSrc.connect(actx.destination);
-  if(running&&!paused){ autoPause=true; setPaused(true); }                // don't let the playback be heard as speech
-  libSrc.onended=()=>{ if(autoPause&&running){ autoPause=false; setPaused(false); } }; libSrc.start();
-}
+const playPcm=playLoud;
 $('#feed').addEventListener('click',e=>{ const b=e.target.closest('[data-act]'), el=e.target.closest('.lc'); if(!b||!el||!session) return;
   const s=session, it=liveItem(el.dataset.k); if(!it) return; const act=b.dataset.act;
   if(act==='open'){ cardOpen.add(it.key); return liveCards(); }
