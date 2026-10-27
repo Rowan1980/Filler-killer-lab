@@ -59,6 +59,31 @@ h3{font:600 14px/1.3 var(--body);color:var(--fg);margin:0;letter-spacing:.01em}
 .err{margin:0;padding:12px 16px;border-radius:18px;background:var(--peach);color:var(--fg);font-size:14px}
 .card{background:var(--surface);border-radius:24px;padding:18px;display:flex;flex-direction:column;gap:12px}
 .stack{display:flex;flex-direction:column;gap:10px}
+/* Calibrate: one card per person with their stats; Edit opens the tuning tools under that card */
+.pcards{display:flex;flex-direction:column;gap:12px}
+.pcard{background:var(--surface);border:1.5px solid transparent;border-radius:24px;padding:16px;display:flex;flex-direction:column;gap:12px}
+.pcard.open{border-color:var(--accent);background:var(--peach)}
+.pc-top{display:flex;align-items:center;gap:10px}
+.pc-top .av{flex:none;width:34px;height:34px;border-radius:17px;background:var(--fg);color:var(--bg);display:grid;place-items:center;font:700 15px var(--body)}
+.pc-name{flex:1;min-width:0;font:600 18px var(--body);color:var(--fg);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc-edit{flex:none;display:flex;align-items:center;gap:6px;min-height:40px;padding:0 14px;border-radius:20px;border:1.5px solid var(--fg);background:transparent;color:var(--fg);font:600 14px var(--body);cursor:pointer}
+.pc-edit svg{width:15px;height:15px;fill:none;stroke:currentColor;stroke-width:1.8;stroke-linejoin:round;stroke-linecap:round}
+.pcard.open .pc-edit{background:var(--fg);color:var(--primary-ink)}
+.pc-stats{display:flex;align-items:flex-end;gap:16px;flex-wrap:wrap}
+.pc-big{display:flex;align-items:baseline;gap:8px}
+.pc-big b{font:400 48px/1 var(--display);color:var(--accent-text)}
+.pc-big span,.pc-sub span{font:500 14px var(--body);color:var(--muted)}
+.pc-sub{display:flex;flex-direction:column;gap:2px}
+.pc-sub b{font-weight:700;color:var(--fg)}
+.pc-bars{display:flex;flex-direction:column;gap:8px}
+.pc-bars h4{margin:0;font:600 12px var(--body);letter-spacing:.06em;text-transform:uppercase;color:var(--muted)}
+.pc-row{display:grid;grid-template-columns:minmax(0,7.5em) 1fr auto;align-items:center;gap:10px;font:500 13.5px var(--body);color:var(--fg)}
+.pc-row .l{overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.pc-row .bar{height:12px;border-radius:6px;background:var(--rule);overflow:hidden}
+.pc-row .bar i{display:block;height:100%;border-radius:6px;background:var(--accent)}
+.pc-row .v{font-variant-numeric:tabular-nums;color:var(--muted);white-space:nowrap}
+.pc-row .v b{color:var(--fg)}
+.caldetail{display:flex;flex-direction:column;gap:20px;padding:0 2px 6px}
 .row{display:flex;flex-wrap:wrap;gap:10px;align-items:flex-end}
 .row>*{min-width:0}
 label{font-size:13px;color:var(--fg);display:flex;flex-direction:column;gap:6px;font-weight:600}
@@ -390,6 +415,8 @@ th{font:600 12px var(--body);color:var(--muted)}
 <!-- 5 · Calibrate (with the um library) -->
 <main class="screen" id="vCal" hidden>
   <div><h2>Tune to my voice</h2><p class="lead" style="font-size:15px">Check your ums in a few sessions, then tune detection to how you speak. <span class="note" id="calWho"></span></p></div>
+  <div class="pcards" id="calPeople"></div>
+  <div class="caldetail" id="calDetail" hidden>
   <section class="card">
     <div class="bar" style="min-height:0;align-items:flex-start"><div><h3 style="font-size:16px">Your tuning</h3><p class="note" id="calNote"></p></div>
       <label class="chip" style="flex:none"><input type="checkbox" id="useCal" disabled> On</label></div>
@@ -408,6 +435,7 @@ th{font:600 12px var(--body);color:var(--muted)}
   <section class="stack"><h3>How it works</h3>
     <p class="note">Practise with “Calibrate as I go” on, or review a session afterwards. Mark each um, add any it missed, and tick “I've reviewed every filler”. With about 3 minutes and 8 ums reviewed, tap Tune again. More reviewed sessions make it more reliable.</p>
   </section>
+  </div>
 </main>
 
 <!-- 7 · Settings -->
@@ -569,7 +597,7 @@ function go(v,push=true){
       $('#elapsed').textContent='00:00'; $('#feedWrap').hidden=true; $('#catch').hidden=true; $('#transcript').hidden=true;
       const e=$('#engine').value; $('#calLiveRow').hidden=!((e==='local'||e==='hybrid')&&$('#keepRec').checked&&mode==='live'); } }
   if(v==='vReview') setTimeout(()=>{ drawTl(); },30);
-  if(v==='vCal'){ calRefresh(); renderLib(); }
+  if(v==='vCal'){ calRefresh(); renderLib(); renderCalPeople(); }
 }
 document.querySelector('.tabbar').addEventListener('click',e=>{ const b=e.target.closest('[data-go]'); if(b) go(b.dataset.go); });
 function back(){ viewStack.pop(); go(viewStack[viewStack.length-1]||'vLive',false); }
@@ -1080,7 +1108,40 @@ $('#whoPills').addEventListener('click',e=>{ const b=e.target.closest('button');
   if(b.dataset.add) return $('#whoAdd').click();
   if(b.dataset.edit) return openWhoEdit(b.dataset.edit);
   const p=profs(); if(running) return showErr('End practice before changing who is talking.'); p.current=b.dataset.who; saveProfs(p); switchWho(); });
-function switchWho(){ cur=null; renderWho(); refreshSessions(); }
+function switchWho(){ cur=null; renderWho(); refreshSessions(); if(!$('#vCal').hidden) renderCalPeople(); }
+
+// Calibrate: a card per person (ums tuned on, minutes practised, fillers caught, top 3 fillers); Edit opens the tuning tools for them
+let calOpen=null;
+const fmtMin=m=>m<60?`${Math.round(m)}m`:`${Math.floor(m/60)}h ${Math.round(m%60)}m`;
+async function renderCalPeople(){
+  const p=profs(), all=await tx('meta','readonly',s=>s.getAll()).catch(()=>[])||[];
+  const esc=s=>String(s).replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
+  const pen='<svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 20l4-1 11-11-3-3L5 16z"/><path d="M14 7l3 3"/></svg>';
+  if(calOpen&&!p.list.includes(calOpen)) calOpen=null;
+  $('#calPeople').innerHTML=p.list.map(n=>{
+    let h=[], c=null; try{ h=JSON.parse(localStorage.getItem('fk_hist:'+n)||'[]'); c=JSON.parse(localStorage.getItem('fk_cal:'+n)||'null'); }catch(e){}
+    const marked=all.filter(m=>m.profile===n).reduce((a,m)=>a+m.alerts.filter(x=>x.label==='real').length+m.missed.filter(t=>missOn(m,t)).length,0);
+    const mins=h.reduce((a,x)=>a+(x.min||0),0), caught=h.reduce((a,x)=>a+(x.n||0),0), per={};
+    for(const x of h) for(const [k,v] of Object.entries(x.per||{})){ const id=k==='snd'?'um':k; per[id]=(per[id]||0)+v; }   // sound ums count with "um"
+    const top=Object.entries(per).filter(([,v])=>v>0).sort((a,b)=>b[1]-a[1]).slice(0,3), mx=top.length?top[0][1]:1;
+    const big=c?c.ums:marked, bigL=c?`um${big===1?'':'s'} tuned on`:`um${big===1?'':'s'} marked · not tuned yet`;
+    const rows=top.map(([k,v])=>`<div class="pc-row"><span class="l">${esc(k==='um'?'um / uh':LABEL[k]||k)}</span><span class="bar"><i style="width:${Math.max(4,Math.round(v/mx*100))}%"></i></span><span class="v"><b>${v}</b> · ${mins>0?(v/mins).toFixed(1):'–'}/min</span></div>`).join('');
+    const open=calOpen===n;
+    return `<section class="pcard${open?' open':''}" data-who="${esc(n)}">
+      <div class="pc-top"><span class="av" aria-hidden="true">${esc((n[0]||'?').toUpperCase())}</span><span class="pc-name">${esc(n)}</span>
+        <button class="pc-edit" data-edit="${esc(n)}" aria-expanded="${open}" aria-controls="calDetail">${pen}${open?'Done':'Edit'}</button></div>
+      <div class="pc-stats"><div class="pc-big"><b>${big}</b><span>${bigL}</span></div>
+        <div class="pc-sub"><span><b>${fmtMin(mins)}</b> of speech</span><span><b>${caught}</b> filler${caught===1?'':'s'} detected</span></div></div>
+      ${rows?`<div class="pc-bars"><h4>Top fillers</h4>${rows}</div>`:'<p class="note" style="margin:0">No practice sessions yet.</p>'}
+    </section>`; }).join('');
+  const d=$('#calDetail'), card=calOpen&&[...$('#calPeople').children].find(x=>x.dataset.who===calOpen);
+  if(card){ card.after(d); d.hidden=false; } else { $('#calPeople').after(d); d.hidden=true; }
+}
+$('#calPeople').addEventListener('click',e=>{ const b=e.target.closest('[data-edit]'); if(!b) return; const n=b.dataset.edit;
+  if(calOpen===n){ calOpen=null; return renderCalPeople(); }
+  const p=profs();
+  if(p.current!==n){ if(running) return showErr('End practice before changing who is talking.'); p.current=n; saveProfs(p); calOpen=n; switchWho(); calRefresh(); renderLib(); return; }
+  calOpen=n; renderCalPeople(); });
 $('#who').addEventListener('change',e=>{ const p=profs();
   if(running){ e.target.value=p.current; return showErr('Stop listening before changing who is talking.'); }
   p.current=e.target.value; saveProfs(p); switchWho(); });
