@@ -67,10 +67,16 @@ select,input[type=password],input[type=text]{font:500 16px var(--body);height:46
 .person select{height:36px;border:0;background:transparent;padding:0 8px;font-weight:600}
 .person.wide{padding:0 4px 0 6px}
 .person.wide select{font-size:15px;max-width:12em}
-.frow{display:flex;align-items:flex-start;gap:10px}
-.frow .link{flex:none;min-height:32px}
-.fchips{flex:1 1 auto;min-width:0;display:flex;flex-wrap:wrap;gap:6px}
-.fchip{flex:none;white-space:nowrap;padding:6px 12px;border-radius:16px;background:var(--peach);border:1px solid var(--peach-line);color:var(--accent-text);font:600 13px var(--body)}
+.fchips{display:flex;flex-wrap:wrap;gap:8px}
+.fchip{position:relative;flex:none;display:inline-flex;flex-direction:row;cursor:pointer;-webkit-tap-highlight-color:transparent}
+.fchip input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
+.fchip span{display:flex;align-items:center;white-space:nowrap;min-height:40px;padding:0 15px;border-radius:20px;border:1.5px solid var(--line);background:transparent;color:var(--muted);font:600 14px var(--body);transition:background .15s,color .15s}
+.fchip input:checked+span{background:var(--peach);border-color:var(--accent);color:var(--accent-text)}
+.fchip input:focus-visible+span{outline:2px solid var(--accent);outline-offset:2px}
+.fchip:active span{transform:scale(.97)}
+.fchip.big span{min-height:48px;padding:0 22px;border-radius:24px;font-size:17px}
+.fchips.locked .fchip{cursor:default}
+.fchips.locked input:not(:checked)+span{opacity:.5}
 .alertrow{display:flex;align-items:center;gap:8px}
 .circ{position:relative;flex:none;width:46px;height:46px;cursor:pointer;-webkit-tap-highlight-color:transparent}
 .circ input{position:absolute;inset:0;opacity:0;margin:0;cursor:pointer}
@@ -278,14 +284,7 @@ th{font:600 12px var(--body);color:var(--muted)}
   <div class="timerwrap"><div class="timer" id="elapsed" aria-live="off">00:00</div><p class="note">Keep going. Take your time.</p></div>
   <div class="countbox" id="countBox" role="status" aria-live="polite"><span class="n" id="total">0</span><span class="l" id="totalWord">fillers</span></div>
 
-  <div class="frow"><div class="fchips" id="fillerRow" aria-label="Filler words being counted"></div>
-    <button class="link" id="fillerEditBtn" aria-expanded="false" aria-controls="fillerEdit">Edit</button></div>
-  <section class="stack" id="fillerEdit" aria-labelledby="hFill" hidden>
-    <div class="bar" style="min-height:0"><h3 id="hFill">Filler words <span class="note" id="fillerSum" style="font-weight:500"></span></h3>
-      <button class="link" id="moreWords" aria-expanded="false">Add words</button></div>
-    <div class="pills fillers" id="fillerChips"></div>
-    <div class="pills fillers more" id="fillerMore" hidden></div>
-  </section>
+  <div class="fchips fillers" id="fillerRow" role="group" aria-label="Filler words to count: tap to turn on or off"></div>
 
   <div class="alertrow" id="promptChips">
     <label class="circ" title="Vibration"><input type="checkbox" id="aVibe" checked aria-label="Vibration"><span><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="8" y="4" width="8" height="16" rx="2"/><path d="M4.5 9v6M19.5 9v6"/></svg></span></label>
@@ -533,16 +532,10 @@ let beepCtx=null, wakeLock=null, timer=null;
 const $=s=>document.querySelector(s);
 
 // chips
-const pillHtml=f=>`<label class="pill"><input type="checkbox" value="${f.id}" ${f.on?'checked':''}><span>${f.label}</span></label>`;
-$('#fillerChips').innerHTML = FILLERS.slice(0,6).map(pillHtml).join('');   // the six everyday ones; the rest under "Add words"
-$('#fillerMore').innerHTML = FILLERS.slice(6).map(pillHtml).join('');
-function syncFillerSum(){const on=enabled(), n=on.size;$('#fillerSum').textContent=`· ${n} of ${FILLERS.length} on`;
-  $('#fillerRow').innerHTML=n?FILLERS.filter(f=>on.has(f.id)).map(f=>`<span class="fchip">${f.label}</span>`).join(''):'<span class="note">No filler words on</span>';}
-$('#fillerEditBtn').addEventListener('click',e=>{ const open=$('#fillerEdit').hidden; $('#fillerEdit').hidden=!open; e.currentTarget.setAttribute('aria-expanded',open); e.currentTarget.textContent=open?'Done':'Edit'; });
-function syncIdle(){ $('#who').disabled=running; $('#fillerEditBtn').hidden=running;   // who and which words are fixed once a session starts
-  if(running&&!$('#fillerEdit').hidden) $('#fillerEditBtn').click(); }
-document.querySelectorAll('.fillers').forEach(el=>el.addEventListener('change',syncFillerSum)); syncFillerSum();
-$('#moreWords').addEventListener('click',e=>{ const open=$('#fillerMore').hidden; $('#fillerMore').hidden=!open; e.currentTarget.setAttribute('aria-expanded',open); e.currentTarget.textContent=open?'Fewer words':'Add words'; });
+// every filler is a chip you tap on or off; um and uh lead and are a little bigger
+$('#fillerRow').innerHTML = FILLERS.map((f,i)=>`<label class="fchip${i<2?' big':''}"><input type="checkbox" value="${f.id}" ${f.on?'checked':''}><span>${f.label}</span></label>`).join('');
+function syncIdle(){ $('#who').disabled=running;   // who and which words are fixed once a session starts
+  $('#fillerRow').querySelectorAll('input').forEach(i=>i.disabled=running); $('#fillerRow').classList.toggle('locked',running); }
 
 // ---------- Screens ----------
 const VIEWS=['vLive','vSummary','vReview','vCal','vLab'], TABS=['vLive','vSummary','vCal','vLab']; let viewStack=['vLive'];
