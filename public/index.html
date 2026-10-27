@@ -176,6 +176,15 @@ details.sect[open]>summary::after{transform:translateY(2px) rotate(-135deg)}
 audio{width:100%}
 /* um library */
 .libh{font:600 12px var(--body);text-transform:uppercase;letter-spacing:.06em;color:var(--muted);margin:10px 0 0}
+.libsess{border:1.5px solid var(--line);border-radius:22px;padding:0 12px;margin-top:10px}
+.libsess[open]{padding-bottom:12px}
+.libsess>summary{list-style:none;cursor:pointer;display:flex;align-items:center;gap:12px;min-height:60px;-webkit-tap-highlight-color:transparent}
+.libsess>summary::-webkit-details-marker{display:none}
+.libsess>summary::after{content:'';flex:none;width:9px;height:9px;border-right:2px solid var(--muted);border-bottom:2px solid var(--muted);transform:translateY(-3px) rotate(45deg);transition:transform .2s}
+.libsess[open]>summary::after{transform:translateY(2px) rotate(-135deg)}
+.ls-name{flex:1;min-width:0;display:flex;flex-direction:column;font:600 15px var(--body);color:var(--fg);overflow-wrap:anywhere}
+.ls-name small,.ls-n small{font:400 13px var(--body);color:var(--muted)}
+.ls-n{display:flex;align-items:baseline;gap:4px;font:600 18px var(--body);color:var(--accent-text)}
 .clip{border-radius:22px;background:var(--surface);padding:12px;display:flex;flex-direction:column;gap:8px;transition:opacity .15s;margin-top:8px}
 .clip.off{opacity:.6;background:transparent;border:1.5px dashed var(--line)}
 .cliprow{display:flex;align-items:center;gap:8px}
@@ -1022,7 +1031,7 @@ renderWho();
 
 // um library: every um in this person's recordings (alerts not marked "not", plus missed ums), with play / trim / include.
 // Uses the same session objects as Review (metas), so both stay in step. Trim = meta.spans[key]; excluded missed = meta.off[key].
-const libAudio=new Map(), LIB_PAD=1.0; let actx=null, libSrc=null, libDrag=null, libMap=new Map(), libTimer=null;
+const libAudio=new Map(), LIB_PAD=1.0; let actx=null, libSrc=null, libDrag=null, libMap=new Map(), libTimer=null; const libShown=new Set();
 const libOpen=()=>!$('#libPanel').hidden, missKey=t=>'m'+Math.round(t*100), missOn=(m,t)=>!(m.off&&m.off[missKey(t)]);
 async function libGetAudio(id){
   if(!libAudio.has(id)){ if(libAudio.size>=6) libAudio.delete(libAudio.keys().next().value); libAudio.set(id, await dbGetAudio(id).catch(()=>null)); }
@@ -1049,14 +1058,18 @@ function renderLib(){
   const n=groups.reduce((a,g)=>a+g.items.length,0), on=groups.reduce((a,g)=>a+g.items.filter(i=>i.on).length,0);
   $('#libSum').textContent=n?`${n} ums in ${groups.length} recording${groups.length>1?'s':''} · ${on} included`:'No ums yet. Record a session with the on-device or hybrid engine.';
   const esc=s=>s.replace(/[&<>"]/g,ch=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;'}[ch]));
-  $('#libList').innerHTML=groups.map(g=>`<h3 class="libh">${g.m.name?esc(g.m.name)+' · ':''}${sessDate(g.m)} · ${fmtT(g.m.dur)}</h3>`+g.items.map(it=>{ const id=g.m.id+'|'+it.key; libMap.set(id,it);
+  $('#libList').innerHTML=groups.map(g=>{ const k=g.items.filter(i=>i.on).length;
+    return `<details class="libsess" data-sess="${g.m.id}"${libShown.has(g.m.id)?' open':''}><summary><span class="ls-name">${g.m.name?esc(g.m.name):sessDate(g.m)}<small>${g.m.name?sessDate(g.m)+' · ':''}${fmtT(g.m.dur)}</small></span><span class="ls-n">${k}<small>${k===g.items.length?(k===1?'um':'ums'):'of '+g.items.length}</small></span></summary>`+g.items.map(it=>{ const id=g.m.id+'|'+it.key; libMap.set(id,it);
     return `<div class="clip${it.on?'':' off'}" data-id="${id}">
       <div class="cliprow"><label class="pill sm"><input type="checkbox" data-act="on" ${it.on?'checked':''} aria-label="Include the um at ${fmtT2(it.t)}"><span>${it.on?'Um':'Excluded'}</span></label>
         <span class="t" style="font:600 14px var(--mono)">${fmtT2(it.t)}</span><span class="what">${it.tag} · <b data-len>${(it.span[1]-it.span[0]).toFixed(2)} s</b></span></div>
       <canvas class="wave" aria-label="Waveform: drag the edges of the highlighted part to trim the um"></canvas>
-      <div class="cliprow btns"><button class="ibtn" data-act="play">▶ Um</button><button class="ibtn" data-act="ctx">▶ Context</button></div></div>`; }).join('')).join('');
-  for(const el of $('#libList').querySelectorAll('.clip')) drawClip(el);
+      <div class="cliprow btns"><button class="ibtn" data-act="play">▶ Um</button><button class="ibtn" data-act="ctx">▶ Context</button></div></div>`; }).join('')+'</details>'; }).join('');
+  for(const el of $('#libList').querySelectorAll('details[open] .clip')) drawClip(el);
 }
+// sessions start collapsed; remember which are open so re-renders keep them open, and draw a session's clips when it opens
+$('#libList').addEventListener('toggle',e=>{ const d=e.target; if(!d.matches||!d.matches('details.libsess')) return; const id=+d.dataset.sess;
+  if(d.open){ libShown.add(id); for(const el of d.querySelectorAll('.clip')) drawClip(el); } else libShown.delete(id); },true);
 const libSoon=()=>{ if(!libOpen()) return; clearTimeout(libTimer); libTimer=setTimeout(renderLib,60); };
 async function drawClip(el,keepWin){ // keepWin: hold the view still while an edge is dragged
   const it=libMap.get(el.dataset.id), c=el.querySelector('canvas'), au=await libGetAudio(it.m.id);
