@@ -27,7 +27,7 @@ html,body{margin:0}
 body{background:var(--bg);color:var(--text);font:16px/1.5 var(--body);-webkit-text-size-adjust:100%}
 /* large heading across the top, and the section bar along the bottom */
 .masthead{max-width:560px;margin:0 auto;padding:max(14px,env(safe-area-inset-top)) max(20px,env(safe-area-inset-right)) 0 max(20px,env(safe-area-inset-left))}
-.wordmark.big{font:700 clamp(30px,9.2vw,54px)/1.05 var(--body);letter-spacing:-.02em;white-space:nowrap;padding-bottom:12px;border-bottom:1px solid var(--rule)}
+.wordmark.big{font:700 clamp(28px,calc(9.2vw - 2px),52px)/1.05 var(--body);letter-spacing:-.02em;min-height:2.15em;padding-bottom:12px;border-bottom:1px solid var(--rule)}
 .tabbar{position:fixed;left:0;right:0;bottom:0;z-index:30;background:var(--bg);border-top:1px solid var(--line);padding:0 max(6px,env(safe-area-inset-right)) env(safe-area-inset-bottom) max(6px,env(safe-area-inset-left))}
 .tabin{max-width:560px;margin:0 auto;display:grid;grid-auto-flow:column;grid-auto-columns:minmax(0,1fr)}
 .tabbar button{min-height:62px;padding:6px 2px 4px;border:0;background:transparent;color:var(--muted);font:500 11px/1.1 var(--body);display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;cursor:pointer;touch-action:manipulation;position:relative}
@@ -43,8 +43,8 @@ body{background:var(--bg);color:var(--text);font:16px/1.5 var(--body);-webkit-te
 .wordmark{font:700 18px/1 var(--body);letter-spacing:.01em;color:var(--fg);margin:0}
 .wordmark span{color:var(--accent)}
 /* heading types "... err", "... umm", "... like.. you know", then rests on "... I mean" */
-.tw{display:block;min-height:1.05em;font-weight:500;color:var(--muted);font-size:.78em;letter-spacing:-.01em}
-@media (min-width:640px){.tw{display:inline;font-size:1em;margin-left:.25em}}
+.wordmark .wm{font-weight:inherit;white-space:nowrap}
+.tw{font-weight:500;color:var(--muted);font-size:calc(.78em - 2.5px);letter-spacing:-.01em}   /* starts right after "Lab"; the word wraps to the next line when it doesn't fit */
 .tw i{font-style:normal}
 .caret{display:inline-block;width:.07em;height:.9em;margin-left:.06em;vertical-align:-.08em;background:var(--accent);animation:blink 1.05s steps(1) infinite}
 @keyframes blink{50%{opacity:0}}
@@ -266,7 +266,7 @@ th{font:600 12px var(--body);color:var(--muted)}
   <button class="btn secondary" id="cdCancel">Cancel</button>
 </div>
 
-<header class="masthead"><p class="wordmark big">Filler <span>Killer</span> Lab<b class="tw" aria-hidden="true"><i id="twText"></i><i class="caret"></i></b></p></header>
+<header class="masthead"><p class="wordmark big"><strong class="wm">Filler <span>Killer</span> Lab</strong><b class="tw" aria-hidden="true"><i id="twText"></i><i class="caret"></i></b></p></header>
 
 <nav class="tabbar" aria-label="Sections">
   <div class="tabin">
@@ -543,10 +543,10 @@ const $=s=>document.querySelector(s);
   if(matchMedia('(prefers-reduced-motion: reduce)').matches){ el.textContent=W[1]; return; }
   await wait(700);
   for(let w=0;;w=(w+1)%W.length){
-    for(let i=1;i<=W[w].length;i++){ el.textContent=W[w].slice(0,i); await wait(W[w][i-1]==='.'?220:140); }
-    await wait(1400);
-    for(let i=W[w].length-1;i>=0;i--){ el.textContent=W[w].slice(0,i); await wait(55); }
-    await wait(450); } })();
+    for(let i=1;i<=W[w].length;i++){ el.textContent=W[w].slice(0,i); await wait(i===4?1100:W[w][i-1]==='.'?380:230); }   // i===4: long pause after "... "
+    await wait(1800);
+    for(let i=W[w].length-1;i>=0;i--){ el.textContent=W[w].slice(0,i); await wait(80); }
+    await wait(700); } })();
 
 // chips
 // every filler is a chip you tap on or off; um and uh lead and are a little bigger
