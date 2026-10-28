@@ -418,7 +418,7 @@ th{font:600 12px var(--body);color:var(--muted)}
   <div class="pcards" id="calPeople"></div>
   <div class="caldetail" id="calDetail" hidden>
   <section class="card">
-    <div class="bar" style="min-height:0;align-items:flex-start"><div><h3 style="font-size:16px">Your tuning</h3><p class="note" id="calNote"></p></div>
+    <div class="bar" style="min-height:0;align-items:flex-start"><div><h3 style="font-size:16px">Your tuning</h3><p class="note" id="calNote"></p><p class="note" id="calCode" hidden></p></div>
       <label class="chip" style="flex:none"><input type="checkbox" id="useCal" disabled> On</label></div>
     <div class="scroll"><table id="calTable" hidden><thead><tr><th>Setting</th><th>Standard</th><th>Yours</th></tr></thead><tbody></tbody></table></div>
     <button class="btn" id="calBtn">Tune again</button>
@@ -1263,6 +1263,9 @@ async function calRefresh(){
   $('#calNote').textContent=!c ? 'Not calibrated yet. Mark at least 3 minutes of recordings (every um), then calibrate.'
     : !ok ? 'Your calibration was made for a different model version. Mark a new recording and calibrate again.'
     : `Calibrated ${new Date(c.date).toLocaleDateString()} from ${c.minutes} min and ${c.ums} of your ums (ums caught · false alerts, standard vs yours). More marked recordings make it more reliable.`;
+  // the same tuning for the phone app: threshold % and frames for catch more / balanced / fewer buzzes ("x" = standard)
+  const code=ok?'FK '+['sensitive','balanced','strict'].map(k=>{const p=c.presets&&c.presets[k]; return p?`${Math.round(p[0]*100)}-${p[1]}`:'x';}).join(' '):'';
+  $('#calCode').hidden=!ok; $('#calCode').innerHTML=ok?`Phone app code: <strong style="color:var(--fg);user-select:all">${code}</strong>. Enter it in the app under Settings › Your tuning.`:'';
 }
 $('#calBtn').addEventListener('click',calibrate);
 $('#useCal').addEventListener('change',e=>{ const c=getCal(); if(!c) return; c.use=e.target.checked; try{ localStorage.setItem(calKey(),JSON.stringify(c)); }catch(err){} });
