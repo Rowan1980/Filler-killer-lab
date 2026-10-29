@@ -23,6 +23,19 @@ const send = (res, code, body) => { res.writeHead(code, { 'content-type': 'appli
 
 http.createServer(async (req, res) => {
   if (req.method === 'GET' && req.url === '/healthz') return send(res, 200, { ok: true, deepgram: !!KEY });
+  // live practice: a short-lived Deepgram pass (60 s to open the stream) so the phone can stream straight to Deepgram
+  if (req.method === 'POST' && req.url === '/v1/live-token') {
+    if (!KEY) return send(res, 503, { error: 'Deepgram key not set on the server' });
+    const ip = String(req.headers['x-forwarded-for'] || req.socket.remoteAddress || '').split(',')[0].trim();
+    const no = allowed(ip, 20 * 60);   // count each live session as up to 20 minutes against the daily cap
+    if (no) return send(res, 429, { error: no });
+    try {
+      const r = await fetch(`${DG}/v1/auth/grant`, { method: 'POST', headers: { Authorization: `Token ${KEY}`, 'content-type': 'application/json' }, body: JSON.stringify({ ttl_seconds: 60 }) });
+      if (!r.ok) { console.error('grant', r.status, (await r.text()).slice(0, 300)); return send(res, 502, { error: `Deepgram said ${r.status}` }); }
+      const j = await r.json();
+      return send(res, 200, { token: j.access_token });
+    } catch (e) { console.error(e); return send(res, 502, { error: 'could not reach Deepgram' }); }
+  }
   if (req.method !== 'POST' || req.url !== '/v1/fillers') return send(res, 404, { error: 'not found' });
   if (!KEY) return send(res, 503, { error: 'Deepgram key not set on the server' });
 
