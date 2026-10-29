@@ -1,0 +1,7 @@
+{
+  "name": "filler-killer-api",
+  "private": true,
+  "description": "Filler Killer API: checks saved sessions with Deepgram for the phone app",
+  "engines": { "node": ">=20" },
+  "scripts": { "start": "node server.js" }
+}
